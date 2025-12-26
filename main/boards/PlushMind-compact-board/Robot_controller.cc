@@ -1,5 +1,5 @@
 /*
-    Otto机器人控制器 - MCP协议版本
+    Robot机器人控制器 - MCP协议版本
 */
 
 #include <cJSON.h>
@@ -12,23 +12,23 @@
 #include "board.h"
 #include "config.h"
 #include "mcp_server.h"
-#include "otto_movements.h"
+#include "Robot_movements.h"
 #include "power_manager.h"
 #include "sdkconfig.h"
 #include "settings.h"
 #include <wifi_manager.h>
 
-#define TAG "OttoController"
+#define TAG "RobotController"
 
-class OttoController {
+class RobotController {
 private:
-    Otto otto_;
+    Robot Robot_;
     TaskHandle_t action_task_handle_ = nullptr;
     QueueHandle_t action_queue_;
     bool has_hands_ = false;
     bool is_action_in_progress_ = false;
 
-    struct OttoActionParams {
+    struct RobotActionParams {
         int action_type;
         int steps;
         int speed;
@@ -65,19 +65,29 @@ private:
         ACTION_SHOWCASE = 28,   // 展示动作
         ACTION_HOME = 17,
         ACTION_SERVO_SEQUENCE = 18,  // 舵机序列（自编程）
-        ACTION_WHIRLWIND_LEG = 19    // 旋风腿
+        ACTION_WHIRLWIND_LEG = 19,    // 旋风腿
+        ACTION_CLAP = 100            // 拍手
     };
 
     static void ActionTask(void* arg) {
-        OttoController* controller = static_cast<OttoController*>(arg);
-        OttoActionParams params;
-        controller->otto_.AttachServos();
+        RobotController* controller = static_cast<RobotController*>(arg);
+        RobotActionParams params;
+        controller->Robot_.AttachServos();
 
         while (true) {
             if (xQueueReceive(controller->action_queue_, &params, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 ESP_LOGI(TAG, "执行动作: %d", params.action_type);
-                PowerManager::PauseBatteryUpdate();  // 动作开始时暂停电量更新
+                // HACK :#1 没有电池
+                // PowerManager::PauseBatteryUpdate();  // 动作开始时暂停电量更新
                 controller->is_action_in_progress_ = true;
+                switch (params.action_type) {
+                    case ACTION_WALK: 
+                        // TODO :#2 添加拍手动作执行函数
+                        break;
+                    default:
+                        break;
+                }
+                /*
                 if (params.action_type == ACTION_SERVO_SEQUENCE) {
                     // 执行舵机序列（自编程）- 仅支持短键名格式
                     cJSON* json = cJSON_Parse(params.servo_sequence_json);
@@ -201,7 +211,7 @@ private:
                                         
                                         // 执行振荡 - 使用Execute2，以绝对角度为中心
                                         ESP_LOGI(TAG, "执行振荡动作%d: period=%d, steps=%.1f", i, period, steps);
-                                        controller->otto_.Execute2(amplitude, center_angle, period, phase_diff, steps);
+                                        controller->Robot_.Execute2(amplitude, center_angle, period, phase_diff, steps);
                                         
                                         // 振荡后更新位置（使用center_angle作为最终位置）
                                         for (int j = 0; j < SERVO_COUNT; j++) {
@@ -246,7 +256,7 @@ private:
                                         ESP_LOGI(TAG, "执行动作%d: ll=%d, rl=%d, lf=%d, rf=%d, v=%d",
                                                  i, servo_target[LEFT_LEG], servo_target[RIGHT_LEG],
                                                  servo_target[LEFT_FOOT], servo_target[RIGHT_FOOT], speed);
-                                        controller->otto_.MoveServos(speed, servo_target);
+                                        controller->Robot_.MoveServos(speed, servo_target);
                                         
                                         // 更新当前位置数组，用于下一个动作
                                         for (int j = 0; j < SERVO_COUNT; j++) {
@@ -298,153 +308,182 @@ private:
                     // 执行预定义动作
                     switch (params.action_type) {
                         case ACTION_WALK:
-                            controller->otto_.Walk(params.steps, params.speed, params.direction,
+                            controller->Robot_.Walk(params.steps, params.speed, params.direction,
                                                    params.amount);
                             break;
                         case ACTION_TURN:
-                            controller->otto_.Turn(params.steps, params.speed, params.direction,
+                            controller->Robot_.Turn(params.steps, params.speed, params.direction,
                                                    params.amount);
                             break;
                         case ACTION_JUMP:
-                            controller->otto_.Jump(params.steps, params.speed);
+                            controller->Robot_.Jump(params.steps, params.speed);
                             break;
                         case ACTION_SWING:
-                            controller->otto_.Swing(params.steps, params.speed, params.amount);
+                            controller->Robot_.Swing(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_MOONWALK:
-                            controller->otto_.Moonwalker(params.steps, params.speed, params.amount,
+                            controller->Robot_.Moonwalker(params.steps, params.speed, params.amount,
                                                          params.direction);
                             break;
                         case ACTION_BEND:
-                            controller->otto_.Bend(params.steps, params.speed, params.direction);
+                            controller->Robot_.Bend(params.steps, params.speed, params.direction);
                             break;
                         case ACTION_SHAKE_LEG:
-                            controller->otto_.ShakeLeg(params.steps, params.speed, params.direction);
+                            controller->Robot_.ShakeLeg(params.steps, params.speed, params.direction);
                             break;
                         case ACTION_SIT:
-                            controller->otto_.Sit();
+                            controller->Robot_.Sit();
                             break;
                         case ACTION_RADIO_CALISTHENICS:
                             if (controller->has_hands_) {
-                                controller->otto_.RadioCalisthenics();
+                                controller->Robot_.RadioCalisthenics();
                             }
                             break;
                         case ACTION_MAGIC_CIRCLE:
                             if (controller->has_hands_) {
-                                controller->otto_.MagicCircle();
+                                controller->Robot_.MagicCircle();
                             }
                             break;
                         case ACTION_SHOWCASE:
-                            controller->otto_.Showcase();
+                            controller->Robot_.Showcase();
                             break;
                         case ACTION_UPDOWN:
-                            controller->otto_.UpDown(params.steps, params.speed, params.amount);
+                            controller->Robot_.UpDown(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_TIPTOE_SWING:
-                            controller->otto_.TiptoeSwing(params.steps, params.speed, params.amount);
+                            controller->Robot_.TiptoeSwing(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_JITTER:
-                            controller->otto_.Jitter(params.steps, params.speed, params.amount);
+                            controller->Robot_.Jitter(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_ASCENDING_TURN:
-                            controller->otto_.AscendingTurn(params.steps, params.speed, params.amount);
+                            controller->Robot_.AscendingTurn(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_CRUSAITO:
-                            controller->otto_.Crusaito(params.steps, params.speed, params.amount,
+                            controller->Robot_.Crusaito(params.steps, params.speed, params.amount,
                                                        params.direction);
                             break;
                         case ACTION_FLAPPING:
-                            controller->otto_.Flapping(params.steps, params.speed, params.amount,
+                            controller->Robot_.Flapping(params.steps, params.speed, params.amount,
                                                        params.direction);
                             break;
                         case ACTION_WHIRLWIND_LEG:
-                            controller->otto_.WhirlwindLeg(params.steps, params.speed, params.amount);
+                            controller->Robot_.WhirlwindLeg(params.steps, params.speed, params.amount);
                             break;
                         case ACTION_HANDS_UP:
                             if (controller->has_hands_) {
-                                controller->otto_.HandsUp(params.speed, params.direction);
+                                controller->Robot_.HandsUp(params.speed, params.direction);
                             }
                             break;
                         case ACTION_HANDS_DOWN:
                             if (controller->has_hands_) {
-                                controller->otto_.HandsDown(params.speed, params.direction);
+                                controller->Robot_.HandsDown(params.speed, params.direction);
                             }
                             break;
                         case ACTION_HAND_WAVE:
                             if (controller->has_hands_) {
-                                controller->otto_.HandWave( params.direction);
+                                controller->Robot_.HandWave( params.direction);
                             }
                             break;
                         case ACTION_WINDMILL:
                             if (controller->has_hands_) {
-                                controller->otto_.Windmill(params.steps, params.speed, params.amount);
+                                controller->Robot_.Windmill(params.steps, params.speed, params.amount);
                             }
                             break;
                         case ACTION_TAKEOFF:
                             if (controller->has_hands_) {
-                                controller->otto_.Takeoff(params.steps, params.speed, params.amount);
+                                controller->Robot_.Takeoff(params.steps, params.speed, params.amount);
                             }
                             break;
                         case ACTION_FITNESS:
                             if (controller->has_hands_) {
-                                controller->otto_.Fitness(params.steps, params.speed, params.amount);
+                                controller->Robot_.Fitness(params.steps, params.speed, params.amount);
                             }
                             break;
                         case ACTION_GREETING:
                             if (controller->has_hands_) {
-                                controller->otto_.Greeting(params.direction, params.steps);
+                                controller->Robot_.Greeting(params.direction, params.steps);
                             }
                             break;
                         case ACTION_SHY:
                             if (controller->has_hands_) {
-                                controller->otto_.Shy(params.direction, params.steps);
+                                controller->Robot_.Shy(params.direction, params.steps);
                             }
                             break;
                         case ACTION_HOME:
-                            controller->otto_.Home(true);
+                            controller->Robot_.Home(true);
                             break;
                     }
                     if(params.action_type != ACTION_SIT){
                         if (params.action_type != ACTION_HOME && params.action_type != ACTION_SERVO_SEQUENCE) {
-                            controller->otto_.Home(params.action_type != ACTION_HANDS_UP);
+                            controller->Robot_.Home(params.action_type != ACTION_HANDS_UP);
                         }
                     }
                 }
+                */
                 controller->is_action_in_progress_ = false;
-                PowerManager::ResumeBatteryUpdate();  // 动作结束时恢复电量更新
+                // HACK :#1 没有电池
+                // PowerManager::ResumeBatteryUpdate();  // 动作结束时恢复电量更新
                 vTaskDelay(pdMS_TO_TICKS(20));
             }
         }
     }
 
+    /**
+     * @brief 如果动作任务尚未创建，则启动一个新的动作任务
+     * 
+     * 该函数检查当前是否已存在动作任务句柄，如果不存在则创建一个新的FreeRTOS任务
+     * 用于处理机器人的动作执行，该任务具有最高优先级以确保及时响应
+     * 
+     * @return 无返回值
+     */
     void StartActionTaskIfNeeded() {
+        // 检查是否需要创建新的动作任务
         if (action_task_handle_ == nullptr) {
-            xTaskCreate(ActionTask, "otto_action", 1024 * 3, this, configMAX_PRIORITIES - 1,
+            xTaskCreate(ActionTask, "Robot_action", 1024 * 3, this, configMAX_PRIORITIES - 1,
                         &action_task_handle_);
         }
     }
 
+    /**
+     * @brief 队列化执行机器人动作
+     * 
+     * 将指定的动作参数加入队列，由动作任务异步执行。该函数会检查手部动作的硬件配置要求，
+     * 并将动作参数发送到动作队列中。
+     * 
+     * @param action_type 动作类型，包括手部动作、风车动作、起飞动作等
+     * @param steps 动作执行的步数
+     * @param speed 动作执行的速度
+     * @param direction 动作执行的方向
+     * @param amount 动作执行的幅度
+     * @return 无返回值
+     */
     void QueueAction(int action_type, int steps, int speed, int direction, int amount) {
-        // 检查手部动作
-        if ((action_type >= ACTION_HANDS_UP && action_type <= ACTION_HAND_WAVE) || 
-            (action_type == ACTION_WINDMILL) || (action_type == ACTION_TAKEOFF) || 
-            (action_type == ACTION_FITNESS) || (action_type == ACTION_GREETING) ||
-            (action_type == ACTION_SHY) || (action_type == ACTION_RADIO_CALISTHENICS) ||
-            (action_type == ACTION_MAGIC_CIRCLE)) {
+        // 检查手部动作是否需要手部舵机支持
+        if (action_type >= ACTION_CLAP) {
             if (!has_hands_) {
                 ESP_LOGW(TAG, "尝试执行手部动作，但机器人没有配置手部舵机");
                 return;
             }
         }
-
+    
         ESP_LOGI(TAG, "动作控制: 类型=%d, 步数=%d, 速度=%d, 方向=%d, 幅度=%d", action_type, steps,
                  speed, direction, amount);
-
-        OttoActionParams params = {action_type, steps, speed, direction, amount, ""};
+    
+        RobotActionParams params = {action_type, steps, speed, direction, amount, ""};
         xQueueSend(action_queue_, &params, portMAX_DELAY);
         StartActionTaskIfNeeded();
     }
 
+    /**
+     * @brief 将舵机序列JSON添加到执行队列中
+     * 
+     * 该函数接收一个包含舵机序列配置的JSON字符串，验证其有效性后，
+     * 将其封装到参数结构体中并发送到动作执行队列，然后启动动作任务。
+     * 
+     * @param servo_sequence_json 包含舵机序列配置的JSON字符串，格式应为有效的JSON
+     * @return 无返回值，但会通过日志输出操作结果和错误信息
+     */
     void QueueServoSequence(const char* servo_sequence_json) {
         if (servo_sequence_json == nullptr) {
             ESP_LOGE(TAG, "序列JSON为空");
@@ -465,7 +504,7 @@ private:
             return;
         }
         
-        OttoActionParams params = {ACTION_SERVO_SEQUENCE, 0, 0, 0, 0, ""};
+        RobotActionParams params = {ACTION_SERVO_SEQUENCE, 0, 0, 0, 0, ""};
         // 复制JSON字符串到结构体中（限制长度）
         strncpy(params.servo_sequence_json, servo_sequence_json, sizeof(params.servo_sequence_json) - 1);
         params.servo_sequence_json[sizeof(params.servo_sequence_json) - 1] = '\0';
@@ -477,24 +516,24 @@ private:
     }
 
     void LoadTrimsFromNVS() {
-        Settings settings("otto_trims", false);
+        Settings settings("Robot_trims", false);
 
-        int left_leg = settings.GetInt("left_leg", 0);
-        int right_leg = settings.GetInt("right_leg", 0);
-        int left_foot = settings.GetInt("left_foot", 0);
+        int head = settings.GetInt("head", 0);
+        int right_hand = settings.GetInt("right_hand", 0);
+        int left_hand = settings.GetInt("left_hand", 0);
         int right_foot = settings.GetInt("right_foot", 0);
         int left_hand = settings.GetInt("left_hand", 0);
         int right_hand = settings.GetInt("right_hand", 0);
 
         ESP_LOGI(TAG, "从NVS加载微调设置: 左腿=%d, 右腿=%d, 左脚=%d, 右脚=%d, 左手=%d, 右手=%d",
-                 left_leg, right_leg, left_foot, right_foot, left_hand, right_hand);
+                 head, right_hand, left_hand, right_foot, left_hand, right_hand);
 
-        otto_.SetTrims(left_leg, right_leg, left_foot, right_foot, left_hand, right_hand);
+        Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
     }
 
 public:
-    OttoController(const HardwareConfig& hw_config) {
-        otto_.Init(
+    RobotController(const HardwareConfig& hw_config) {
+        Robot_.Init(
             hw_config.left_leg_pin, 
             hw_config.right_leg_pin, 
             hw_config.left_foot_pin, 
@@ -504,7 +543,7 @@ public:
         );
 
         has_hands_ = (hw_config.left_hand_pin != GPIO_NUM_NC && hw_config.right_hand_pin != GPIO_NUM_NC);
-        ESP_LOGI(TAG, "Otto机器人初始化%s手部舵机", has_hands_ ? "带" : "不带");
+        ESP_LOGI(TAG, "Robot机器人初始化%s手部舵机", has_hands_ ? "带" : "不带");
         ESP_LOGI(TAG, "舵机引脚配置: LL=%d, RL=%d, LF=%d, RF=%d, LH=%d, RH=%d",
                  hw_config.left_leg_pin, hw_config.right_leg_pin,
                  hw_config.left_foot_pin, hw_config.right_foot_pin,
@@ -512,7 +551,7 @@ public:
 
         LoadTrimsFromNVS();
 
-        action_queue_ = xQueueCreate(10, sizeof(OttoActionParams));
+        action_queue_ = xQueueCreate(10, sizeof(RobotActionParams));
 
         QueueAction(ACTION_HOME, 1, 1000, 1, 0);  // direction=1表示复位手部
 
@@ -524,8 +563,14 @@ public:
 
         ESP_LOGI(TAG, "开始注册MCP工具...");
 
+        mcp_server.AddTool("self.Robot.calp","拍手",
+                           PropertyList(),
+                           [this](const PropertyList& properties) -> ReturnValue {
+                            QueueAction(ACTION_CALP, 1, 1000, 1, 0);
+                            }
+        /*
         // 统一动作工具（除了舵机序列外的所有动作）
-        mcp_server.AddTool("self.otto.action",
+        mcp_server.AddTool("self.Robot.action",
                            "执行机器人动作。action: 动作名称；根据动作类型提供相应参数：direction: 方向，1=前进/左转，-1=后退/右转；0=左右同时"
                            "steps: 动作步数，1-100；speed: 动作速度，100-3000，数值越小越快；amount: 动作幅度，0-170；arm_swing: 手臂摆动幅度，0-170；"
                            "基础动作：walk(行走，需steps/speed/direction/arm_swing)、turn(转身，需steps/speed/direction/arm_swing)、jump(跳跃，需steps/speed)、"
@@ -657,11 +702,12 @@ public:
                                    return "错误：无效的动作名称。可用动作：walk, turn, jump, swing, moonwalk, bend, shake_leg, updown, whirlwind_leg, sit, showcase, home, hands_up, hands_down, hand_wave, windmill, takeoff, fitness, greeting, shy, radio_calisthenics, magic_circle";
                                }
                            });
+        */
 
-
+        /*
         // 舵机序列工具（支持分段发送，每次发送一个序列，自动排队执行）
         mcp_server.AddTool(
-            "self.otto.servo_sequences",
+            "self.Robot.servo_sequences",
             "AI自定义动作编程（即兴动作）。支持分段发送序列：超过5个序列建议AI可以连续多次调用此工具，每次发送一个短序列，系统会自动排队按顺序执行。支持普通移动和振荡器两种模式。"
             "机器人结构：双手可上下摆动，双腿可内收外展，双脚可上下翻转。"
             "舵机说明："
@@ -677,12 +723,12 @@ public:
             "普通模式：'s'舵机位置对象(键名：ll/rl/lf/rf/lh/rh，值：0-180度)，'v'移动速度100-3000毫秒(默认1000)，'d'动作后延迟毫秒数(默认0)；"
             "振荡模式：'osc'振荡器对象，包含'a'振幅对象(各舵机振幅10-90度，默认20度)，'o'中心角度对象(各舵机振荡中心绝对角度0-180度，默认90度)，'ph'相位差对象(各舵机相位差，度，0-360度，默认0度)，'p'周期100-3000毫秒(默认500)，'c'周期数0.1-20.0(默认5.0)；"
             "使用方式：AI可以连续多次调用此工具，每次发送一个序列，系统会自动排队按顺序执行。"
-            "重要说明：左右腿脚震荡的时候，有一只脚必须在90度，否则会损坏机器人，如果发送多个序列（序列数>1），完成所有序列后需要复位时，AI应该最后单独调用self.otto.home工具进行复位，不要在序列中设置复位参数。"
+            "重要说明：左右腿脚震荡的时候，有一只脚必须在90度，否则会损坏机器人，如果发送多个序列（序列数>1），完成所有序列后需要复位时，AI应该最后单独调用self.Robot.home工具进行复位，不要在序列中设置复位参数。"
             "普通模式示例：发送3个序列，最后调用复位："
             "第1次调用{\"sequence\":\"{\\\"a\\\":[{\\\"s\\\":{\\\"ll\\\":100},\\\"v\\\":1000}],\\\"d\\\":500}\"}，"
             "第2次调用{\"sequence\":\"{\\\"a\\\":[{\\\"s\\\":{\\\"ll\\\":90},\\\"v\\\":800}],\\\"d\\\":500}\"}，"
             "第3次调用{\"sequence\":\"{\\\"a\\\":[{\\\"s\\\":{\\\"ll\\\":80},\\\"v\\\":800}]}\"}，"
-            "最后调用self.otto.home工具进行复位。"
+            "最后调用self.Robot.home工具进行复位。"
             "振荡器模式示例："
             "示例1-双臂同步摆动：{\"sequence\":\"{\\\"a\\\":[{\\\"osc\\\":{\\\"a\\\":{\\\"lh\\\":30,\\\"rh\\\":30},\\\"o\\\":{\\\"lh\\\":90,\\\"rh\\\":-90},\\\"p\\\":500,\\\"c\\\":5.0}}],\\\"d\\\":0}\"}；"
             "示例2-双腿交替振荡（波浪效果）：{\"sequence\":\"{\\\"a\\\":[{\\\"osc\\\":{\\\"a\\\":{\\\"ll\\\":20,\\\"rl\\\":20},\\\"o\\\":{\\\"ll\\\":90,\\\"rl\\\":-90},\\\"ph\\\":{\\\"rl\\\":180},\\\"p\\\":600,\\\"c\\\":3.0}}],\\\"d\\\":0}\"}；"
@@ -698,9 +744,9 @@ public:
                 QueueServoSequence(sequence.c_str());
                 return true;
             });
+            */
 
-
-        mcp_server.AddTool("self.otto.stop", "立即停止所有动作并复位", PropertyList(),
+        mcp_server.AddTool("self.Robot.stop", "立即停止所有动作并复位", PropertyList(),
                            [this](const PropertyList& properties) -> ReturnValue {
                                if (action_task_handle_ != nullptr) {
                                    vTaskDelete(action_task_handle_);
@@ -713,13 +759,13 @@ public:
                                QueueAction(ACTION_HOME, 1, 1000, 1, 0);
                                return true;
                            });
-
+                           
         mcp_server.AddTool(
-            "self.otto.set_trim",
+            "self.Robot.set_trim",
             "校准单个舵机位置。设置指定舵机的微调参数以调整机器人的初始站立姿态，设置将永久保存。"
-            "servo_type: 舵机类型(left_leg/right_leg/left_foot/right_foot/left_hand/right_hand); "
+            "servo_type: 舵机类型(head/right_hand/left_hand); "
             "trim_value: 微调值(-50到50度)",
-            PropertyList({Property("servo_type", kPropertyTypeString, "left_leg"),
+            PropertyList({Property("servo_type", kPropertyTypeString, "head"),
                           Property("trim_value", kPropertyTypeInteger, 0, -50, 50)}),
             [this](const PropertyList& properties) -> ReturnValue {
                 std::string servo_type = properties["servo_type"].value<std::string>();
@@ -728,45 +774,27 @@ public:
                 ESP_LOGI(TAG, "设置舵机微调: %s = %d度", servo_type.c_str(), trim_value);
 
                 // 获取当前所有微调值
-                Settings settings("otto_trims", true);
-                int left_leg = settings.GetInt("left_leg", 0);
-                int right_leg = settings.GetInt("right_leg", 0);
-                int left_foot = settings.GetInt("left_foot", 0);
-                int right_foot = settings.GetInt("right_foot", 0);
-                int left_hand = settings.GetInt("left_hand", 0);
+                Settings settings("Robot_trims", true);
+                int head = settings.GetInt("head", 0);
                 int right_hand = settings.GetInt("right_hand", 0);
+                int left_hand = settings.GetInt("left_hand", 0);
 
                 // 更新指定舵机的微调值
-                if (servo_type == "left_leg") {
-                    left_leg = trim_value;
-                    settings.SetInt("left_leg", left_leg);
-                } else if (servo_type == "right_leg") {
-                    right_leg = trim_value;
-                    settings.SetInt("right_leg", right_leg);
-                } else if (servo_type == "left_foot") {
-                    left_foot = trim_value;
-                    settings.SetInt("left_foot", left_foot);
-                } else if (servo_type == "right_foot") {
-                    right_foot = trim_value;
-                    settings.SetInt("right_foot", right_foot);
-                } else if (servo_type == "left_hand") {
-                    if (!has_hands_) {
-                        return "错误：机器人没有配置手部舵机";
-                    }
-                    left_hand = trim_value;
-                    settings.SetInt("left_hand", left_hand);
+                if (servo_type == "head") {
+                    head = trim_value;
+                    settings.SetInt("head", head);
                 } else if (servo_type == "right_hand") {
-                    if (!has_hands_) {
-                        return "错误：机器人没有配置手部舵机";
-                    }
                     right_hand = trim_value;
                     settings.SetInt("right_hand", right_hand);
+                } else if (servo_type == "left_hand") {
+                    left_hand = trim_value;
+                    settings.SetInt("left_hand", left_hand);
                 } else {
-                    return "错误：无效的舵机类型，请使用: left_leg, right_leg, left_foot, "
+                    return "错误：无效的舵机类型，请使用: head, right_hand, left_hand, "
                            "right_foot, left_hand, right_hand";
                 }
 
-                otto_.SetTrims(left_leg, right_leg, left_foot, right_foot, left_hand, right_hand);
+                Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
 
                 QueueAction(ACTION_JUMP, 1, 500, 0, 0);
 
@@ -774,30 +802,24 @@ public:
                        " 度，已永久保存";
             });
 
-        mcp_server.AddTool("self.otto.get_trims", "获取当前的舵机微调设置", PropertyList(),
+        mcp_server.AddTool("self.Robot.get_trims", "获取当前的舵机微调设置", PropertyList(),
                            [this](const PropertyList& properties) -> ReturnValue {
-                               Settings settings("otto_trims", false);
+                               Settings settings("Robot_trims", false);
 
-                               int left_leg = settings.GetInt("left_leg", 0);
-                               int right_leg = settings.GetInt("right_leg", 0);
-                               int left_foot = settings.GetInt("left_foot", 0);
-                               int right_foot = settings.GetInt("right_foot", 0);
-                               int left_hand = settings.GetInt("left_hand", 0);
+                               int head = settings.GetInt("head", 0);
                                int right_hand = settings.GetInt("right_hand", 0);
+                               int left_hand = settings.GetInt("left_hand", 0);
 
                                std::string result =
-                                   "{\"left_leg\":" + std::to_string(left_leg) +
-                                   ",\"right_leg\":" + std::to_string(right_leg) +
-                                   ",\"left_foot\":" + std::to_string(left_foot) +
-                                   ",\"right_foot\":" + std::to_string(right_foot) +
+                                   "{\"head\":" + std::to_string(head) +
+                                   ",\"right_hand\":" + std::to_string(right_hand) +
                                    ",\"left_hand\":" + std::to_string(left_hand) +
-                                   ",\"right_hand\":" + std::to_string(right_hand) + "}";
 
                                ESP_LOGI(TAG, "获取微调设置: %s", result.c_str());
                                return result;
                            });
 
-        mcp_server.AddTool("self.otto.get_status", "获取机器人状态，返回 moving 或 idle",
+        mcp_server.AddTool("self.Robot.get_status", "获取机器人状态，返回 moving 或 idle",
                            PropertyList(), [this](const PropertyList& properties) -> ReturnValue {
                                return is_action_in_progress_ ? "moving" : "idle";
                            });
@@ -816,7 +838,7 @@ public:
                                return status;
                            });
                            
-        mcp_server.AddTool("self.otto.get_ip", "获取机器人WiFi IP地址", PropertyList(),
+        mcp_server.AddTool("self.Robot.get_ip", "获取机器人WiFi IP地址", PropertyList(),
                            [](const PropertyList& properties) -> ReturnValue {
                                auto& wifi = WifiManager::GetInstance();
                                std::string ip = wifi.GetIpAddress();
@@ -830,7 +852,7 @@ public:
         ESP_LOGI(TAG, "MCP工具注册完成");
     }
 
-    ~OttoController() {
+    ~RobotController() {
         if (action_task_handle_ != nullptr) {
             vTaskDelete(action_task_handle_);
             action_task_handle_ = nullptr;
@@ -839,11 +861,11 @@ public:
     }
 };
 
-static OttoController* g_otto_controller = nullptr;
+static RobotController* g_Robot_controller = nullptr;
 
-void InitializeOttoController(const HardwareConfig& hw_config) {
-    if (g_otto_controller == nullptr) {
-        g_otto_controller = new OttoController(hw_config);
-        ESP_LOGI(TAG, "Otto控制器已初始化并注册MCP工具");
+void InitializeRobotController(const HardwareConfig& hw_config) {
+    if (g_Robot_controller == nullptr) {
+        g_Robot_controller = new RobotController(hw_config);
+        ESP_LOGI(TAG, "Robot控制器已初始化并注册MCP工具");
     }
 }
