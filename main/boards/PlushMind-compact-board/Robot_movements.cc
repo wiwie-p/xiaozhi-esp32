@@ -1,16 +1,16 @@
-#include "otto_movements.h"
+#include "Robot_movements.h"
 
 #include <algorithm>
 
 #include "freertos/idf_additions.h"
 #include "oscillator.h"
 
-static const char* TAG = "OttoMovements";
+static const char* TAG = "RobotMovements";
 
 #define HAND_HOME_POSITION 45
 
-Otto::Otto() {
-    is_otto_resting_ = false;
+Robot::Robot() {
+    is_Robot_resting_ = false;
     has_hands_ = false;
     // 初始化所有舵机管脚为-1（未连接）
     for (int i = 0; i < SERVO_COUNT; i++) {
@@ -19,7 +19,7 @@ Otto::Otto() {
     }
 }
 
-Otto::~Otto() {
+Robot::~Robot() {
     DetachServos();
 }
 
@@ -27,7 +27,7 @@ unsigned long IRAM_ATTR millis() {
     return (unsigned long)(esp_timer_get_time() / 1000ULL);
 }
 
-void Otto::Init(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
+void Robot::Init(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
                 int right_hand) {
     servo_pins_[LEFT_LEG] = left_leg;
     servo_pins_[RIGHT_LEG] = right_leg;
@@ -40,13 +40,13 @@ void Otto::Init(int left_leg, int right_leg, int left_foot, int right_foot, int 
     has_hands_ = (left_hand != -1 && right_hand != -1);
 
     AttachServos();
-    is_otto_resting_ = false;
+    is_Robot_resting_ = false;
 }
 
 ///////////////////////////////////////////////////////////////////
 //-- ATTACH & DETACH FUNCTIONS ----------------------------------//
 ///////////////////////////////////////////////////////////////////
-void Otto::AttachServos() {
+void Robot::AttachServos() {
     for (int i = 0; i < SERVO_COUNT; i++) {
         if (servo_pins_[i] != -1) {
             servo_[i].Attach(servo_pins_[i]);
@@ -54,7 +54,7 @@ void Otto::AttachServos() {
     }
 }
 
-void Otto::DetachServos() {
+void Robot::DetachServos() {
     for (int i = 0; i < SERVO_COUNT; i++) {
         if (servo_pins_[i] != -1) {
             servo_[i].Detach();
@@ -65,7 +65,7 @@ void Otto::DetachServos() {
 ///////////////////////////////////////////////////////////////////
 //-- OSCILLATORS TRIMS ------------------------------------------//
 ///////////////////////////////////////////////////////////////////
-void Otto::SetTrims(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
+void Robot::SetTrims(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
                     int right_hand) {
     servo_trim_[LEFT_LEG] = left_leg;
     servo_trim_[RIGHT_LEG] = right_leg;
@@ -87,7 +87,7 @@ void Otto::SetTrims(int left_leg, int right_leg, int left_foot, int right_foot, 
 ///////////////////////////////////////////////////////////////////
 //-- BASIC MOTION FUNCTIONS -------------------------------------//
 ///////////////////////////////////////////////////////////////////
-void Otto::MoveServos(int time, int servo_target[]) {
+void Robot::MoveServos(int time, int servo_target[]) {
     if (GetRestState() == true) {
         SetRestState(false);
     }
@@ -141,7 +141,7 @@ void Otto::MoveServos(int time, int servo_target[]) {
     };
 }
 
-void Otto::MoveSingle(int position, int servo_number) {
+void Robot::MoveSingle(int position, int servo_number) {
     if (position > 180)
         position = 90;
     if (position < 0)
@@ -156,7 +156,7 @@ void Otto::MoveSingle(int position, int servo_number) {
     }
 }
 
-void Otto::OscillateServos(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
+void Robot::OscillateServos(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
                            double phase_diff[SERVO_COUNT], float cycle = 1) {
     for (int i = 0; i < SERVO_COUNT; i++) {
         if (servo_pins_[i] != -1) {
@@ -181,7 +181,7 @@ void Otto::OscillateServos(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], 
     vTaskDelay(pdMS_TO_TICKS(10));
 }
 
-void Otto::Execute(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
+void Robot::Execute(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
                    double phase_diff[SERVO_COUNT], float steps = 1.0) {
     if (GetRestState() == true) {
         SetRestState(false);
@@ -208,7 +208,7 @@ void Otto::Execute(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int peri
 //--    phase_diff: 相位差数组（弧度）
 //--    steps: 步数/周期数（可为小数）
 //---------------------------------------------------------
-void Otto::Execute2(int amplitude[SERVO_COUNT], int center_angle[SERVO_COUNT], int period,
+void Robot::Execute2(int amplitude[SERVO_COUNT], int center_angle[SERVO_COUNT], int period,
                     double phase_diff[SERVO_COUNT], float steps = 1.0) {
     if (GetRestState() == true) {
         SetRestState(false);
@@ -233,10 +233,10 @@ void Otto::Execute2(int amplitude[SERVO_COUNT], int center_angle[SERVO_COUNT], i
 }
 
 ///////////////////////////////////////////////////////////////////
-//-- HOME = Otto at rest position -------------------------------//
+//-- HOME = Robot at rest position -------------------------------//
 ///////////////////////////////////////////////////////////////////
-void Otto::Home(bool hands_down) {
-    if (is_otto_resting_ == false) {  // Go to rest position only if necessary
+void Robot::Home(bool hands_down) {
+    if (is_Robot_resting_ == false) {  // Go to rest position only if necessary
         // 为所有舵机准备初始位置值
         int homes[SERVO_COUNT];
         for (int i = 0; i < SERVO_COUNT; i++) {
@@ -259,29 +259,29 @@ void Otto::Home(bool hands_down) {
         }
 
         MoveServos(700, homes);
-        is_otto_resting_ = true;
+        is_Robot_resting_ = true;
     }
 
     vTaskDelay(pdMS_TO_TICKS(200));
 }
 
-bool Otto::GetRestState() {
-    return is_otto_resting_;
+bool Robot::GetRestState() {
+    return is_Robot_resting_;
 }
 
-void Otto::SetRestState(bool state) {
-    is_otto_resting_ = state;
+void Robot::SetRestState(bool state) {
+    is_Robot_resting_ = state;
 }
 
 ///////////////////////////////////////////////////////////////////
 //-- PREDETERMINED MOTION SEQUENCES -----------------------------//
 ///////////////////////////////////////////////////////////////////
-//-- Otto movement: Jump
+//-- Robot movement: Jump
 //--  Parameters:
 //--    steps: Number of steps
 //--    T: Period
 //---------------------------------------------------------
-void Otto::Jump(float steps, int period) {
+void Robot::Jump(float steps, int period) {
     int up[SERVO_COUNT] = {90, 90, 150, 30, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
     MoveServos(period, up);
     int down[SERVO_COUNT] = {90, 90, 90, 90, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
@@ -289,14 +289,14 @@ void Otto::Jump(float steps, int period) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Walking  (forward or backward)
+//-- Robot gait: Walking  (forward or backward)
 //--  Parameters:
 //--    * steps:  Number of steps
 //--    * T : Period
 //--    * Dir: Direction: FORWARD / BACKWARD
 //--    * amount: 手部摆动幅度, 0表示不摆动
 //---------------------------------------------------------
-void Otto::Walk(float steps, int period, int dir, int amount) {
+void Robot::Walk(float steps, int period, int dir, int amount) {
     //-- Oscillator parameters for walking
     //-- Hip sevos are in phase
     //-- Feet servos are in phase
@@ -327,15 +327,15 @@ void Otto::Walk(float steps, int period, int dir, int amount) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Turning (left or right)
+//-- Robot gait: Turning (left or right)
 //--  Parameters:
 //--   * Steps: Number of steps
 //--   * T: Period
 //--   * Dir: Direction: LEFT / RIGHT
 //--   * amount: 手部摆动幅度, 0表示不摆动
 //---------------------------------------------------------
-void Otto::Turn(float steps, int period, int dir, int amount) {
-    //-- Same coordination than for walking (see Otto::walk)
+void Robot::Turn(float steps, int period, int dir, int amount) {
+    //-- Same coordination than for walking (see Robot::walk)
     //-- The Amplitudes of the hip's oscillators are not igual
     //-- When the right hip servo amplitude is higher, the steps taken by
     //--   the right leg are bigger than the left. So, the robot describes an
@@ -371,13 +371,13 @@ void Otto::Turn(float steps, int period, int dir, int amount) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Lateral bend
+//-- Robot gait: Lateral bend
 //--  Parameters:
 //--    steps: Number of bends
 //--    T: Period of one bend
 //--    dir: RIGHT=Right bend LEFT=Left bend
 //---------------------------------------------------------
-void Otto::Bend(int steps, int period, int dir) {
+void Robot::Bend(int steps, int period, int dir) {
     // Parameters of all the movements. Default: Left bend
     int bend1[SERVO_COUNT] = {90, 90, 62, 35, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
     int bend2[SERVO_COUNT] = {90, 90, 62, 105, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
@@ -388,7 +388,7 @@ void Otto::Bend(int steps, int period, int dir) {
     // Changes in the parameters if right direction is chosen
     if (dir == -1) {
         bend1[2] = 180 - 35;
-        bend1[3] = 180 - 60;  // Not 65. Otto is unbalanced
+        bend1[3] = 180 - 60;  // Not 65. Robot is unbalanced
         bend2[2] = 180 - 105;
         bend2[3] = 180 - 60;
     }
@@ -406,13 +406,13 @@ void Otto::Bend(int steps, int period, int dir) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Shake a leg
+//-- Robot gait: Shake a leg
 //--  Parameters:
 //--    steps: Number of shakes
 //--    T: Period of one shake
 //--    dir: RIGHT=Right leg LEFT=Left leg
 //---------------------------------------------------------
-void Otto::ShakeLeg(int steps, int period, int dir) {
+void Robot::ShakeLeg(int steps, int period, int dir) {
     // This variable change the amount of shakes
     int numberLegMoves = 2;
 
@@ -455,22 +455,22 @@ void Otto::ShakeLeg(int steps, int period, int dir) {
 }
 
 //---------------------------------------------------------
-//-- Otto movement: Sit (坐下)
+//-- Robot movement: Sit (坐下)
 //---------------------------------------------------------
-void Otto::Sit() {
+void Robot::Sit() {
     int target[SERVO_COUNT] = {120, 60, 0, 180, 45, 135};
     MoveServos(600, target);
 }
 
 //---------------------------------------------------------
-//-- Otto movement: up & down
+//-- Robot movement: up & down
 //--  Parameters:
 //--    * steps: Number of jumps
 //--    * T: Period
 //--    * h: Jump height: SMALL / MEDIUM / BIG
 //--              (or a number in degrees 0 - 90)
 //---------------------------------------------------------
-void Otto::UpDown(float steps, int period, int height) {
+void Robot::UpDown(float steps, int period, int height) {
     //-- Both feet are 180 degrees out of phase
     //-- Feet amplitude and offset are the same
     //-- Initial phase for the right foot is -90, so that it starts
@@ -484,13 +484,13 @@ void Otto::UpDown(float steps, int period, int height) {
 }
 
 //---------------------------------------------------------
-//-- Otto movement: swinging side to side
+//-- Robot movement: swinging side to side
 //--  Parameters:
 //--     steps: Number of steps
 //--     T : Period
 //--     h : Amount of swing (from 0 to 50 aprox)
 //---------------------------------------------------------
-void Otto::Swing(float steps, int period, int height) {
+void Robot::Swing(float steps, int period, int height) {
     //-- Both feets are in phase. The offset is half the amplitude
     //-- It causes the robot to swing from side to side
     int A[SERVO_COUNT] = {0, 0, height, height, 0, 0};
@@ -503,13 +503,13 @@ void Otto::Swing(float steps, int period, int height) {
 }
 
 //---------------------------------------------------------
-//-- Otto movement: swinging side to side without touching the floor with the heel
+//-- Robot movement: swinging side to side without touching the floor with the heel
 //--  Parameters:
 //--     steps: Number of steps
 //--     T : Period
 //--     h : Amount of swing (from 0 to 50 aprox)
 //---------------------------------------------------------
-void Otto::TiptoeSwing(float steps, int period, int height) {
+void Robot::TiptoeSwing(float steps, int period, int height) {
     //-- Both feets are in phase. The offset is not half the amplitude in order to tiptoe
     //-- It causes the robot to swing from side to side
     int A[SERVO_COUNT] = {0, 0, height, height, 0, 0};
@@ -521,13 +521,13 @@ void Otto::TiptoeSwing(float steps, int period, int height) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Jitter
+//-- Robot gait: Jitter
 //--  Parameters:
 //--    steps: Number of jitters
 //--    T: Period of one jitter
 //--    h: height (Values between 5 - 25)
 //---------------------------------------------------------
-void Otto::Jitter(float steps, int period, int height) {
+void Robot::Jitter(float steps, int period, int height) {
     //-- Both feet are 180 degrees out of phase
     //-- Feet amplitude and offset are the same
     //-- Initial phase for the right foot is -90, so that it starts
@@ -543,13 +543,13 @@ void Otto::Jitter(float steps, int period, int height) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Ascending & turn (Jitter while up&down)
+//-- Robot gait: Ascending & turn (Jitter while up&down)
 //--  Parameters:
 //--    steps: Number of bends
 //--    T: Period of one bend
 //--    h: height (Values between 5 - 15)
 //---------------------------------------------------------
-void Otto::AscendingTurn(float steps, int period, int height) {
+void Robot::AscendingTurn(float steps, int period, int height) {
     //-- Both feet and legs are 180 degrees out of phase
     //-- Initial phase for the right foot is -90, so that it starts
     //--   in one extreme position (not in the middle)
@@ -565,19 +565,19 @@ void Otto::AscendingTurn(float steps, int period, int height) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Moonwalker. Otto moves like Michael Jackson
+//-- Robot gait: Moonwalker. Robot moves like Michael Jackson
 //--  Parameters:
 //--    Steps: Number of steps
 //--    T: Period
 //--    h: Height. Typical valures between 15 and 40
 //--    dir: Direction: LEFT / RIGHT
 //---------------------------------------------------------
-void Otto::Moonwalker(float steps, int period, int height, int dir) {
+void Robot::Moonwalker(float steps, int period, int height, int dir) {
     //-- This motion is similar to that of the caterpillar robots: A travelling
     //-- wave moving from one side to another
-    //-- The two Otto's feet are equivalent to a minimal configuration. It is known
+    //-- The two Robot's feet are equivalent to a minimal configuration. It is known
     //-- that 2 servos can move like a worm if they are 120 degrees out of phase
-    //-- In the example of Otto, the two feet are mirrored so that we have:
+    //-- In the example of Robot, the two feet are mirrored so that we have:
     //--    180 - 120 = 60 degrees. The actual phase difference given to the oscillators
     //--  is 60 degrees.
     //--  Both amplitudes are equal. The offset is half the amplitud plus a little bit of
@@ -594,14 +594,14 @@ void Otto::Moonwalker(float steps, int period, int height, int dir) {
 }
 
 //----------------------------------------------------------
-//-- Otto gait: Crusaito. A mixture between moonwalker and walk
+//-- Robot gait: Crusaito. A mixture between moonwalker and walk
 //--   Parameters:
 //--     steps: Number of steps
 //--     T: Period
 //--     h: height (Values between 20 - 50)
 //--     dir:  Direction: LEFT / RIGHT
 //-----------------------------------------------------------
-void Otto::Crusaito(float steps, int period, int height, int dir) {
+void Robot::Crusaito(float steps, int period, int height, int dir) {
     int A[SERVO_COUNT] = {25, 25, height, height, 0, 0};
     int O[SERVO_COUNT] = {
         0, 0, height / 2 + 4, -height / 2 - 4, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
@@ -612,14 +612,14 @@ void Otto::Crusaito(float steps, int period, int height, int dir) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: Flapping
+//-- Robot gait: Flapping
 //--  Parameters:
 //--    steps: Number of steps
 //--    T: Period
 //--    h: height (Values between 10 - 30)
 //--    dir: direction: FOREWARD, BACKWARD
 //---------------------------------------------------------
-void Otto::Flapping(float steps, int period, int height, int dir) {
+void Robot::Flapping(float steps, int period, int height, int dir) {
     int A[SERVO_COUNT] = {12, 12, height, height, 0, 0};
     int O[SERVO_COUNT] = {
         0, 0, height - 10, -height + 10, HAND_HOME_POSITION, 180 - HAND_HOME_POSITION};
@@ -631,13 +631,13 @@ void Otto::Flapping(float steps, int period, int height, int dir) {
 }
 
 //---------------------------------------------------------
-//-- Otto gait: WhirlwindLeg (旋风腿)
+//-- Robot gait: WhirlwindLeg (旋风腿)
 //--   Parameters:
 //--     steps: Number of steps
 //--     period: Period (建议100-800毫秒)
 //--     amplitude: amplitude (Values between 20 - 40)
 //---------------------------------------------------------
-void Otto::WhirlwindLeg(float steps, int period, int amplitude) {
+void Robot::WhirlwindLeg(float steps, int period, int amplitude) {
 
 
     int target[SERVO_COUNT] = {90, 90, 180, 90, 45, 20};
@@ -659,7 +659,7 @@ void Otto::WhirlwindLeg(float steps, int period, int amplitude) {
 //--    period: 动作时间
 //--    dir: 方向 1=左手, -1=右手, 0=双手
 //---------------------------------------------------------
-void Otto::HandsUp(int period, int dir) {
+void Robot::HandsUp(int period, int dir) {
     if (!has_hands_) {
         return;
     }
@@ -686,7 +686,7 @@ void Otto::HandsUp(int period, int dir) {
 //--    period: 动作时间
 //--    dir: 方向 1=左手, -1=右手, 0=双手
 //---------------------------------------------------------
-void Otto::HandsDown(int period, int dir) {
+void Robot::HandsDown(int period, int dir) {
     if (!has_hands_) {
         return;
     }
@@ -707,7 +707,7 @@ void Otto::HandsDown(int period, int dir) {
 //--  Parameters:
 //--  dir: 方向 LEFT/RIGHT/BOTH
 //---------------------------------------------------------
-void Otto::HandWave(int dir) {
+void Robot::HandWave(int dir) {
     if (!has_hands_) {
         return;
     }
@@ -739,7 +739,7 @@ void Otto::HandWave(int dir) {
 //--    period: 动作周期（毫秒）
 //--    amplitude: 振荡幅度（度）
 //---------------------------------------------------------
-void Otto::Windmill(float steps, int period, int amplitude) {
+void Robot::Windmill(float steps, int period, int amplitude) {
     if (!has_hands_) {
         return;
     }
@@ -757,7 +757,7 @@ void Otto::Windmill(float steps, int period, int amplitude) {
 //--    period: 动作周期（毫秒），数值越小速度越快
 //--    amplitude: 振荡幅度（度）
 //---------------------------------------------------------
-void Otto::Takeoff(float steps, int period, int amplitude) {
+void Robot::Takeoff(float steps, int period, int amplitude) {
     if (!has_hands_) {
         return;
     }
@@ -777,7 +777,7 @@ void Otto::Takeoff(float steps, int period, int amplitude) {
 //--    period: 动作周期（毫秒）
 //--    amplitude: 振荡幅度（度）
 //---------------------------------------------------------
-void Otto::Fitness(float steps, int period, int amplitude) {
+void Robot::Fitness(float steps, int period, int amplitude) {
     if (!has_hands_) {
         return;
     }
@@ -800,7 +800,7 @@ void Otto::Fitness(float steps, int period, int amplitude) {
 //--    dir: 方向 LEFT=左手, RIGHT=右手
 //--    steps: 动作次数
 //---------------------------------------------------------
-void Otto::Greeting(int dir, float steps) {
+void Robot::Greeting(int dir, float steps) {
     if (!has_hands_) {
         return;
     }
@@ -829,7 +829,7 @@ void Otto::Greeting(int dir, float steps) {
 //--    dir: 方向 LEFT=左手, RIGHT=右手
 //--    steps: 动作次数
 //---------------------------------------------------------
-void Otto::Shy(int dir, float steps) {
+void Robot::Shy(int dir, float steps) {
     if (!has_hands_) {
         return;
     }
@@ -855,7 +855,7 @@ void Otto::Shy(int dir, float steps) {
 //---------------------------------------------------------
 //-- 手部动作: 广播体操
 //---------------------------------------------------------
-void Otto::RadioCalisthenics() {
+void Robot::RadioCalisthenics() {
     if (!has_hands_) {
         return;
     }
@@ -887,7 +887,7 @@ void Otto::RadioCalisthenics() {
 //---------------------------------------------------------
 //-- 手部动作: 爱的魔力转圈圈
 //---------------------------------------------------------
-void Otto::MagicCircle() {
+void Robot::MagicCircle() {
     if (!has_hands_) {
         return;
     }
@@ -902,7 +902,7 @@ void Otto::MagicCircle() {
 //---------------------------------------------------------
 //-- 展示动作：串联多个动作展示
 //---------------------------------------------------------
-void Otto::Showcase() {
+void Robot::Showcase() {
     if (GetRestState() == true) {
         SetRestState(false);
     }
@@ -947,7 +947,7 @@ void Otto::Showcase() {
     Walk(3, 1000, BACKWARD, 50);
 }
 
-void Otto::EnableServoLimit(int diff_limit) {
+void Robot::EnableServoLimit(int diff_limit) {
     for (int i = 0; i < SERVO_COUNT; i++) {
         if (servo_pins_[i] != -1) {
             servo_[i].SetLimiter(diff_limit);
@@ -955,7 +955,7 @@ void Otto::EnableServoLimit(int diff_limit) {
     }
 }
 
-void Otto::DisableServoLimit() {
+void Robot::DisableServoLimit() {
     for (int i = 0; i < SERVO_COUNT; i++) {
         if (servo_pins_[i] != -1) {
             servo_[i].DisableLimiter();

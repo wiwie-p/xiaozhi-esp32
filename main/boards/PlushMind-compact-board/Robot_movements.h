@@ -1,5 +1,5 @@
-#ifndef __OTTO_MOVEMENTS_H__
-#define __OTTO_MOVEMENTS_H__
+#ifndef __Robot_MOVEMENTS_H__
+#define __Robot_MOVEMENTS_H__
 
 #include "driver/gpio.h"
 #include "esp_log.h"
@@ -30,12 +30,12 @@
 #define RIGHT_HAND 5
 #define SERVO_COUNT 6
 
-class Otto {
+class Robot {
 public:
-    Otto();
-    ~Otto();
+    Robot();
+    ~Robot();
 
-    //-- Otto initialization
+    //-- Robot initialization
     void Init(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand = -1,
               int right_hand = -1);
     //-- Attach & detach functions
@@ -54,7 +54,7 @@ public:
     void Execute2(int amplitude[SERVO_COUNT], int center_angle[SERVO_COUNT], int period,
                   double phase_diff[SERVO_COUNT], float steps);
 
-    //-- HOME = Otto at rest position
+    //-- HOME = Robot at rest position
     void Home(bool hands_down = true);
     bool GetRestState();
     void SetRestState(bool state);
@@ -106,7 +106,7 @@ private:
     unsigned long partial_time_;
     float increment_[SERVO_COUNT];
 
-    bool is_otto_resting_;
+    bool is_Robot_resting_;
     bool has_hands_;  // 是否有手部舵机
 
     void Execute(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
@@ -114,4 +114,4 @@ private:
 
 };
 
-#endif  // __OTTO_MOVEMENTS_H__
+#endif  // __Robot_MOVEMENTS_H__
