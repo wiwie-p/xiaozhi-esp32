@@ -1,4 +1,4 @@
-#include "dual_network_board.h"
+#include "wifi_board.h"
 #include "codecs/no_audio_codec.h"
 #include "display/oled_display.h"
 #include "system_reset.h"
@@ -15,9 +15,13 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 
-#define TAG "PlushMindCompactBoard"
+#ifdef SH1106
+#include <esp_lcd_panel_sh1106.h>
+#endif
 
-class PlushMindCompactBoard : public DualNetworkBoard {
+#define TAG "PlushMindBompactBoard"
+
+class PlushMindBompactBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t display_i2c_bus_;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
@@ -73,7 +77,11 @@ private:
         };
         panel_config.vendor_config = &ssd1306_config;
 
+#ifdef SH1106
+        ESP_ERROR_CHECK(esp_lcd_new_panel_sh1106(panel_io_, &panel_config, &panel_));
+#else
         ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(panel_io_, &panel_config, &panel_));
+#endif
         ESP_LOGI(TAG, "SSD1306 driver installed");
 
         // Reset the display
@@ -83,6 +91,7 @@ private:
             display_ = new NoDisplay();
             return;
         }
+        ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, false));
 
         // Set the display to on
         ESP_LOGI(TAG, "Turning display on");
@@ -94,23 +103,12 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
-            if (GetNetworkType() == NetworkType::WIFI) {
-                if (app.GetDeviceState() == kDeviceStateStarting) {
-                    // cast to WifiBoard
-                    auto& wifi_board = static_cast<WifiBoard&>(GetCurrentBoard());
-                    wifi_board.EnterWifiConfigMode();
-                    return;
-                }
+            if (app.GetDeviceState() == kDeviceStateStarting) {
+                EnterWifiConfigMode();
+                return;
             }
             app.ToggleChatState();
         });
-        boot_button_.OnDoubleClick([this]() {
-            auto& app = Application::GetInstance();
-            if (app.GetDeviceState() == kDeviceStateStarting || app.GetDeviceState() == kDeviceStateWifiConfiguring) {
-                SwitchNetworkType();
-            }
-        });
-
         touch_button_.OnPressDown([this]() {
             Application::GetInstance().StartListening();
         });
@@ -149,18 +147,17 @@ private:
         });
     }
 
-    // 物联网初始化，添加对 AI 可见设备
+    // 物联网初始化，逐步迁移到 MCP 协议
     void InitializeTools() {
         static LampController lamp(LAMP_GPIO);
     }
 
 public:
-    CompactMl307Board() : DualNetworkBoard(ML307_TX_PIN, ML307_RX_PIN, GPIO_NUM_NC),
+    PlushMindBompactBoard() :
         boot_button_(BOOT_BUTTON_GPIO),
         touch_button_(TOUCH_BUTTON_GPIO),
         volume_up_button_(VOLUME_UP_BUTTON_GPIO),
         volume_down_button_(VOLUME_DOWN_BUTTON_GPIO) {
-
         InitializeDisplayI2c();
         InitializeSsd1306Display();
         InitializeButtons();
@@ -188,4 +185,4 @@ public:
     }
 };
 
-DECLARE_BOARD(PlushMindCompactBoard);
+DECLARE_BOARD(PlushMindBompactBoard);
