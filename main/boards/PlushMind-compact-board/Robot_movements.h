@@ -22,13 +22,11 @@
 #define SERVO_LIMIT_DEFAULT 240
 
 // -- Servo indexes for easy access
-#define LEFT_LEG 0
-#define RIGHT_LEG 1
-#define LEFT_FOOT 2
-#define RIGHT_FOOT 3
-#define LEFT_HAND 4
-#define RIGHT_HAND 5
-#define SERVO_COUNT 6
+#define HEAD 0
+#define LH 1
+#define RH 2
+
+#define SERVO_COUNT 3
 
 class Robot {
 public:
@@ -36,15 +34,13 @@ public:
     ~Robot();
 
     //-- Robot initialization
-    void Init(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand = -1,
-              int right_hand = -1);
+    void Init(int head=-1, int right_hand=-1, int left_hand=-1);
     //-- Attach & detach functions
     void AttachServos();
     void DetachServos();
 
     //-- Oscillator Trims
-    void SetTrims(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand = 0,
-                  int right_hand = 0);
+    void SetTrims(int head=0, int right_hand=0, int left_hand=0);
 
     //-- Predetermined Motion Functions
     void MoveServos(int time, int servo_target[]);
@@ -58,7 +54,10 @@ public:
     void Home(bool hands_down = true);
     bool GetRestState();
     void SetRestState(bool state);
-
+    
+    /*
+    * --------------------------------------------------------------------------
+    *                              Motion Functions
     //-- Predetermined Motion Functions
     void Jump(float steps = 1, int period = 2000);
 
@@ -91,6 +90,9 @@ public:
     void RadioCalisthenics();  // 广播体操
     void MagicCircle();  // 爱的魔力转圈圈
     void Showcase();  // 展示动作（串联多个动作）
+    */
+
+    void Calp(int period = 1000, int dir = 0);      // 拍手
 
     // -- Servo limiter
     void EnableServoLimit(int speed_limit_degree_per_sec = SERVO_LIMIT_DEFAULT);

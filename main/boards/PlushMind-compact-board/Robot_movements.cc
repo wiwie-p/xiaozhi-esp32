@@ -27,11 +27,11 @@ unsigned long IRAM_ATTR millis() {
     return (unsigned long)(esp_timer_get_time() / 1000ULL);
 }
 
-void Robot::Init(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
+void Robot::Init(int head, int right_hand, int left_hand, int right_foot, int left_hand,
                 int right_hand) {
-    servo_pins_[LEFT_LEG] = left_leg;
-    servo_pins_[RIGHT_LEG] = right_leg;
-    servo_pins_[LEFT_FOOT] = left_foot;
+    servo_pins_[HEAD] = head;
+    servo_pins_[LH] = right_hand;
+    servo_pins_[RH] = left_hand;
     servo_pins_[RIGHT_FOOT] = right_foot;
     servo_pins_[LEFT_HAND] = left_hand;
     servo_pins_[RIGHT_HAND] = right_hand;
@@ -65,12 +65,8 @@ void Robot::DetachServos() {
 ///////////////////////////////////////////////////////////////////
 //-- OSCILLATORS TRIMS ------------------------------------------//
 ///////////////////////////////////////////////////////////////////
-void Robot::SetTrims(int left_leg, int right_leg, int left_foot, int right_foot, int left_hand,
-                    int right_hand) {
-    servo_trim_[LEFT_LEG] = left_leg;
-    servo_trim_[RIGHT_LEG] = right_leg;
-    servo_trim_[LEFT_FOOT] = left_foot;
-    servo_trim_[RIGHT_FOOT] = right_foot;
+void Robot::SetTrims(int head, int right_hand, int left_hand) {
+    servo_trim_[HEAD] = head;
 
     if (has_hands_) {
         servo_trim_[LEFT_HAND] = left_hand;
@@ -181,6 +177,19 @@ void Robot::OscillateServos(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT],
     vTaskDelay(pdMS_TO_TICKS(10));
 }
 
+/**
+ * @brief 执行机器人伺服电机振荡运动
+ * 
+ * 该函数控制机器人伺服电机按照指定的振幅、偏移、周期和相位差执行振荡运动
+ * 可以执行完整周期和部分周期的运动
+ * 
+ * @param amplitude 伺服电机振幅数组，每个伺服电机的振荡幅度
+ * @param offset 伺服电机偏移数组，每个伺服电机的基准位置偏移
+ * @param period 振荡周期，控制运动的速度
+ * @param phase_diff 伺服电机相位差数组，每个伺服电机之间的相位差
+ * @param steps 要执行的步数/周期数，默认为1.0
+ * @return 无返回值
+ */
 void Robot::Execute(int amplitude[SERVO_COUNT], int offset[SERVO_COUNT], int period,
                    double phase_diff[SERVO_COUNT], float steps = 1.0) {
     if (GetRestState() == true) {
@@ -315,8 +324,8 @@ void Robot::Walk(float steps, int period, int dir, int amount) {
         A[RIGHT_HAND] = amount;
 
         // 左手与右腿同相，右手与左腿同相，使得机器人走路时手臂自然摆动
-        phase_diff[LEFT_HAND] = phase_diff[RIGHT_LEG];  // 左手与右腿同相
-        phase_diff[RIGHT_HAND] = phase_diff[LEFT_LEG];  // 右手与左腿同相
+        phase_diff[LEFT_HAND] = phase_diff[LH];  // 左手与右腿同相
+        phase_diff[RIGHT_HAND] = phase_diff[HEAD];  // 右手与左腿同相
     } else {
         A[LEFT_HAND] = 0;
         A[RIGHT_HAND] = 0;
@@ -359,8 +368,8 @@ void Robot::Turn(float steps, int period, int dir, int amount) {
         A[RIGHT_HAND] = amount;
 
         // 转向时手臂摆动相位：左手与左腿同相，右手与右腿同相，增强转向效果
-        phase_diff[LEFT_HAND] = phase_diff[LEFT_LEG];    // 左手与左腿同相
-        phase_diff[RIGHT_HAND] = phase_diff[RIGHT_LEG];  // 右手与右腿同相
+        phase_diff[LEFT_HAND] = phase_diff[HEAD];    // 左手与左腿同相
+        phase_diff[RIGHT_HAND] = phase_diff[LH];  // 右手与右腿同相
     } else {
         A[LEFT_HAND] = 0;
         A[RIGHT_HAND] = 0;
@@ -783,7 +792,7 @@ void Robot::Fitness(float steps, int period, int amplitude) {
     }
     int target[SERVO_COUNT] = {90, 90, 90, 0, 160, 135};
     MoveServos(100, target);
-    target[LEFT_FOOT] = 20;
+    target[RH] = 20;
     MoveServos(400, target);
     vTaskDelay(pdMS_TO_TICKS(2000));
 
