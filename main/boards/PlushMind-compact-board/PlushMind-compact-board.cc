@@ -149,6 +149,7 @@ private:
 
     // 物联网初始化，逐步迁移到 MCP 协议
     void InitializeTools() {
+        // TODO: 任务 #1 - 更改初始化函数
         static LampController lamp(LAMP_GPIO);
     }
 
@@ -158,8 +159,6 @@ public:
         touch_button_(TOUCH_BUTTON_GPIO),
         volume_up_button_(VOLUME_UP_BUTTON_GPIO),
         volume_down_button_(VOLUME_DOWN_BUTTON_GPIO) {
-        InitializeDisplayI2c();
-        InitializeSsd1306Display();
         InitializeButtons();
         InitializeTools();
     }
@@ -179,10 +178,12 @@ public:
 #endif
         return &audio_codec;
     }
-
-    virtual Display* GetDisplay() override {
-        return display_;
-    }
+    /*
+        没有屏幕
+    */
+    // virtual Display* GetDisplay() override {
+    //     return display_;
+    // }
 };
 
 DECLARE_BOARD(PlushMindBompactBoard);
