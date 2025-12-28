@@ -38,391 +38,36 @@ private:
     };
 
     enum ActionType {
-        ACTION_WALK = 1,
-        ACTION_TURN = 2,
-        ACTION_JUMP = 3,
-        ACTION_SWING = 4,
-        ACTION_MOONWALK = 5,
-        ACTION_BEND = 6,
-        ACTION_SHAKE_LEG = 7,
-        ACTION_SIT = 25,  // 坐下
-        ACTION_RADIO_CALISTHENICS = 26,  // 广播体操
-        ACTION_MAGIC_CIRCLE = 27,  // 爱的魔力转圈圈
-        ACTION_UPDOWN = 8,
-        ACTION_TIPTOE_SWING = 9,
-        ACTION_JITTER = 10,
-        ACTION_ASCENDING_TURN = 11,
-        ACTION_CRUSAITO = 12,
-        ACTION_FLAPPING = 13,
-        ACTION_HANDS_UP = 14,
-        ACTION_HANDS_DOWN = 15,
-        ACTION_HAND_WAVE = 16,
-        ACTION_WINDMILL = 20,  // 大风车
-        ACTION_TAKEOFF = 21,   // 起飞
-        ACTION_FITNESS = 22,   // 健身
-        ACTION_GREETING = 23,  // 打招呼
-        ACTION_SHY = 24,        // 害羞
-        ACTION_SHOWCASE = 28,   // 展示动作
-        ACTION_HOME = 17,
-        ACTION_SERVO_SEQUENCE = 18,  // 舵机序列（自编程）
-        ACTION_WHIRLWIND_LEG = 19,    // 旋风腿
-        ACTION_CLAP = 100            // 拍手
+        ACTION_CLAP = 1            // 拍手
     };
 
+    /**
+     * @brief 机器人动作任务函数
+     * @param arg 指向RobotController对象的指针，用于控制机器人执行各种动作
+     * @return 无返回值
+     */
     static void ActionTask(void* arg) {
         RobotController* controller = static_cast<RobotController*>(arg);
         RobotActionParams params;
         controller->Robot_.AttachServos();
-
+    
+        // 循环处理动作队列中的任务
         while (true) {
             if (xQueueReceive(controller->action_queue_, &params, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 ESP_LOGI(TAG, "执行动作: %d", params.action_type);
-                // HACK :#1 没有电池
+                // HACK #1 没有电池
                 // PowerManager::PauseBatteryUpdate();  // 动作开始时暂停电量更新
                 controller->is_action_in_progress_ = true;
                 switch (params.action_type) {
                     case ACTION_WALK: 
                         // TODO :#2 添加拍手动作执行函数
+                        controller->Robot_.Calp();
                         break;
                     default:
                         break;
                 }
-                /*
-                if (params.action_type == ACTION_SERVO_SEQUENCE) {
-                    // 执行舵机序列（自编程）- 仅支持短键名格式
-                    cJSON* json = cJSON_Parse(params.servo_sequence_json);
-                    if (json != nullptr) {
-                        ESP_LOGD(TAG, "JSON解析成功，长度=%d", strlen(params.servo_sequence_json));
-                        // 使用短键名 "a" 表示动作数组
-                        cJSON* actions = cJSON_GetObjectItem(json, "a");
-                        if (cJSON_IsArray(actions)) {
-                            int array_size = cJSON_GetArraySize(actions);
-                            ESP_LOGI(TAG, "执行舵机序列，共%d个动作", array_size);
-                            
-                            // 获取序列执行完成后的延迟（短键名 "d"，顶层参数）
-                            int sequence_delay = 0;
-                            cJSON* delay_item = cJSON_GetObjectItem(json, "d");
-                            if (cJSON_IsNumber(delay_item)) {
-                                sequence_delay = delay_item->valueint;
-                                if (sequence_delay < 0) sequence_delay = 0;
-                            }
-                            
-                            // 初始化当前舵机位置（用于保持未指定的舵机位置）
-                            int current_positions[SERVO_COUNT];
-                            for (int j = 0; j < SERVO_COUNT; j++) {
-                                current_positions[j] = 90;  // 默认中间位置
-                            }
-                            // 手部舵机默认位置
-                            current_positions[LEFT_HAND] = 45;
-                            current_positions[RIGHT_HAND] = 180 - 45;
-                            
-                            for (int i = 0; i < array_size; i++) {
-                                cJSON* action_item = cJSON_GetArrayItem(actions, i);
-                                if (cJSON_IsObject(action_item)) {
-                                    // 检查是否为振荡器模式（短键名 "osc"）
-                                    cJSON* osc_item = cJSON_GetObjectItem(action_item, "osc");
-                                    if (cJSON_IsObject(osc_item)) {
-                                        // 振荡器模式 - 使用Execute2，以绝对角度为中心振荡
-                                        int amplitude[SERVO_COUNT] = {0};
-                                        int center_angle[SERVO_COUNT] = {0};
-                                        double phase_diff[SERVO_COUNT] = {0};
-                                        int period = 300;  // 默认周期300毫秒
-                                        float steps = 8.0;  // 默认步数8.0
-                                        
-                                        const char* servo_names[] = {"ll", "rl", "lf", "rf", "lh", "rh"};
-                                        
-                                        // 读取振幅（短键名 "a"），默认0度
-                                        for (int j = 0; j < SERVO_COUNT; j++) {
-                                            amplitude[j] = 0;  // 默认振幅0度
-                                        }
-                                        cJSON* amp_item = cJSON_GetObjectItem(osc_item, "a");
-                                        if (cJSON_IsObject(amp_item)) {
-                                            for (int j = 0; j < SERVO_COUNT; j++) {
-                                                cJSON* amp_value = cJSON_GetObjectItem(amp_item, servo_names[j]);
-                                                if (cJSON_IsNumber(amp_value)) {
-                                                    int amp = amp_value->valueint;
-                                                    if (amp >= 10 && amp <= 90) {
-                                                        amplitude[j] = amp;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 读取中心角度（短键名 "o"），默认90度（绝对角度0-180度）
-                                        for (int j = 0; j < SERVO_COUNT; j++) {
-                                            center_angle[j] = 90;  // 默认中心角度90度（中间位置）
-                                        }
-                                        cJSON* center_item = cJSON_GetObjectItem(osc_item, "o");
-                                        if (cJSON_IsObject(center_item)) {
-                                            for (int j = 0; j < SERVO_COUNT; j++) {
-                                                cJSON* center_value = cJSON_GetObjectItem(center_item, servo_names[j]);
-                                                if (cJSON_IsNumber(center_value)) {
-                                                    int center = center_value->valueint;
-                                                    if (center >= 0 && center <= 180) {
-                                                        center_angle[j] = center;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 安全检查：防止左右腿脚同时做大幅度振荡（振幅检查）
-                                        const int LARGE_AMPLITUDE_THRESHOLD = 40;  // 大幅度振幅阈值：40度
-                                        bool left_leg_large = amplitude[LEFT_LEG] >= LARGE_AMPLITUDE_THRESHOLD;
-                                        bool right_leg_large = amplitude[RIGHT_LEG] >= LARGE_AMPLITUDE_THRESHOLD;
-                                        bool left_foot_large = amplitude[LEFT_FOOT] >= LARGE_AMPLITUDE_THRESHOLD;
-                                        bool right_foot_large = amplitude[RIGHT_FOOT] >= LARGE_AMPLITUDE_THRESHOLD;
-                                        
-                                        if (left_leg_large && right_leg_large) {
-                                            ESP_LOGW(TAG, "检测到左右腿同时大幅度振荡，限制右腿振幅");
-                                            amplitude[RIGHT_LEG] = 0;  // 禁止右腿振荡
-                                        }
-                                        if (left_foot_large && right_foot_large) {
-                                            ESP_LOGW(TAG, "检测到左右脚同时大幅度振荡，限制右脚振幅");
-                                            amplitude[RIGHT_FOOT] = 0;  // 禁止右脚振荡
-                                        }
-                                        
-                                        // 读取相位差（短键名 "ph"，单位为度，转换为弧度）
-                                        cJSON* phase_item = cJSON_GetObjectItem(osc_item, "ph");
-                                        if (cJSON_IsObject(phase_item)) {
-                                            for (int j = 0; j < SERVO_COUNT; j++) {
-                                                cJSON* phase_value = cJSON_GetObjectItem(phase_item, servo_names[j]);
-                                                if (cJSON_IsNumber(phase_value)) {
-                                                    // 将度数转换为弧度
-                                                    phase_diff[j] = phase_value->valuedouble * 3.141592653589793 / 180.0;
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 读取周期（短键名 "p"），范围100-3000毫秒
-                                        cJSON* period_item = cJSON_GetObjectItem(osc_item, "p");
-                                        if (cJSON_IsNumber(period_item)) {
-                                            period = period_item->valueint;
-                                            if (period < 100) period = 100;
-                                            if (period > 3000) period = 3000;  // 与描述一致，限制3000毫秒
-                                        }
-                                        
-                                        // 读取周期数（短键名 "c"），范围0.1-20.0
-                                        cJSON* steps_item = cJSON_GetObjectItem(osc_item, "c");
-                                        if (cJSON_IsNumber(steps_item)) {
-                                            steps = (float)steps_item->valuedouble;
-                                            if (steps < 0.1) steps = 0.1;
-                                            if (steps > 20.0) steps = 20.0;  // 与描述一致，限制20.0
-                                        }
-                                        
-                                        // 执行振荡 - 使用Execute2，以绝对角度为中心
-                                        ESP_LOGI(TAG, "执行振荡动作%d: period=%d, steps=%.1f", i, period, steps);
-                                        controller->Robot_.Execute2(amplitude, center_angle, period, phase_diff, steps);
-                                        
-                                        // 振荡后更新位置（使用center_angle作为最终位置）
-                                        for (int j = 0; j < SERVO_COUNT; j++) {
-                                            current_positions[j] = center_angle[j];
-                                        }
-                                    } else {
-                                        // 普通移动模式
-                                        // 从当前位置数组复制，保持未指定的舵机位置
-                                        int servo_target[SERVO_COUNT];
-                                        for (int j = 0; j < SERVO_COUNT; j++) {
-                                            servo_target[j] = current_positions[j];
-                                        }
-                                        
-                                        // 从JSON中读取舵机位置（短键名 "s"）
-                                        cJSON* servos_item = cJSON_GetObjectItem(action_item, "s");
-                                        if (cJSON_IsObject(servos_item)) {
-                                            // 短键名：ll/rl/lf/rf/lh/rh
-                                            const char* servo_names[] = {"ll", "rl", "lf", "rf", "lh", "rh"};
-                                            
-                                            for (int j = 0; j < SERVO_COUNT; j++) {
-                                                cJSON* servo_value = cJSON_GetObjectItem(servos_item, servo_names[j]);
-                                                if (cJSON_IsNumber(servo_value)) {
-                                                    int position = servo_value->valueint;
-                                                    // 限制位置范围在0-180度
-                                                    if (position >= 0 && position <= 180) {
-                                                        servo_target[j] = position;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                                                                                                    
-                                        // 获取移动速度（短键名 "v"，默认1000毫秒）
-                                        int speed = 1000;
-                                        cJSON* speed_item = cJSON_GetObjectItem(action_item, "v");
-                                        if (cJSON_IsNumber(speed_item)) {
-                                            speed = speed_item->valueint;
-                                            if (speed < 100) speed = 100;  // 最小100毫秒
-                                            if (speed > 3000) speed = 3000;  // 最大3000毫秒
-                                        }
-                                        
-                                        // 执行舵机移动
-                                        ESP_LOGI(TAG, "执行动作%d: ll=%d, rl=%d, lf=%d, rf=%d, v=%d",
-                                                 i, servo_target[LEFT_LEG], servo_target[RIGHT_LEG],
-                                                 servo_target[LEFT_FOOT], servo_target[RIGHT_FOOT], speed);
-                                        controller->Robot_.MoveServos(speed, servo_target);
-                                        
-                                        // 更新当前位置数组，用于下一个动作
-                                        for (int j = 0; j < SERVO_COUNT; j++) {
-                                            current_positions[j] = servo_target[j];
-                                        }
-                                    }
-                                    
-                                    // 获取动作后的延迟时间（短键名 "d"）
-                                    int delay_after = 0;
-                                    cJSON* delay_item = cJSON_GetObjectItem(action_item, "d");
-                                    if (cJSON_IsNumber(delay_item)) {
-                                        delay_after = delay_item->valueint;
-                                        if (delay_after < 0) delay_after = 0;
-                                    }
-                                    
-                                    // 动作后的延迟（最后一个动作后不延迟）
-                                    if (delay_after > 0 && i < array_size - 1) {
-                                        ESP_LOGI(TAG, "动作%d执行完成，延迟%d毫秒", i, delay_after);
-                                        vTaskDelay(pdMS_TO_TICKS(delay_after));
-                                    }
-                                }
-                            }
-                            
-                            // 序列执行完成后的延迟（用于序列之间的停顿）
-                            if (sequence_delay > 0) {
-                                // 检查队列中是否还有待执行的序列
-                                UBaseType_t queue_count = uxQueueMessagesWaiting(controller->action_queue_);
-                                if (queue_count > 0) {
-                                    ESP_LOGI(TAG, "序列执行完成，延迟%d毫秒后执行下一个序列（队列中还有%d个序列）", 
-                                             sequence_delay, queue_count);
-                                    vTaskDelay(pdMS_TO_TICKS(sequence_delay));
-                                }
-                            }
-                            // 释放JSON内存
-                            cJSON_Delete(json);
-                        } else {
-                            ESP_LOGE(TAG, "舵机序列格式错误: 'a'不是数组");
-                            cJSON_Delete(json);
-                        }
-                    } else {
-                        // 获取cJSON的错误信息
-                        const char* error_ptr = cJSON_GetErrorPtr();
-                        int json_len = strlen(params.servo_sequence_json);
-                        ESP_LOGE(TAG, "解析舵机序列JSON失败，长度=%d，错误位置: %s", json_len, 
-                                 error_ptr ? error_ptr : "未知");
-                        ESP_LOGE(TAG, "JSON内容: %s", params.servo_sequence_json);
-                    }
-                } else {
-                    // 执行预定义动作
-                    switch (params.action_type) {
-                        case ACTION_WALK:
-                            controller->Robot_.Walk(params.steps, params.speed, params.direction,
-                                                   params.amount);
-                            break;
-                        case ACTION_TURN:
-                            controller->Robot_.Turn(params.steps, params.speed, params.direction,
-                                                   params.amount);
-                            break;
-                        case ACTION_JUMP:
-                            controller->Robot_.Jump(params.steps, params.speed);
-                            break;
-                        case ACTION_SWING:
-                            controller->Robot_.Swing(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_MOONWALK:
-                            controller->Robot_.Moonwalker(params.steps, params.speed, params.amount,
-                                                         params.direction);
-                            break;
-                        case ACTION_BEND:
-                            controller->Robot_.Bend(params.steps, params.speed, params.direction);
-                            break;
-                        case ACTION_SHAKE_LEG:
-                            controller->Robot_.ShakeLeg(params.steps, params.speed, params.direction);
-                            break;
-                        case ACTION_SIT:
-                            controller->Robot_.Sit();
-                            break;
-                        case ACTION_RADIO_CALISTHENICS:
-                            if (controller->has_hands_) {
-                                controller->Robot_.RadioCalisthenics();
-                            }
-                            break;
-                        case ACTION_MAGIC_CIRCLE:
-                            if (controller->has_hands_) {
-                                controller->Robot_.MagicCircle();
-                            }
-                            break;
-                        case ACTION_SHOWCASE:
-                            controller->Robot_.Showcase();
-                            break;
-                        case ACTION_UPDOWN:
-                            controller->Robot_.UpDown(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_TIPTOE_SWING:
-                            controller->Robot_.TiptoeSwing(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_JITTER:
-                            controller->Robot_.Jitter(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_ASCENDING_TURN:
-                            controller->Robot_.AscendingTurn(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_CRUSAITO:
-                            controller->Robot_.Crusaito(params.steps, params.speed, params.amount,
-                                                       params.direction);
-                            break;
-                        case ACTION_FLAPPING:
-                            controller->Robot_.Flapping(params.steps, params.speed, params.amount,
-                                                       params.direction);
-                            break;
-                        case ACTION_WHIRLWIND_LEG:
-                            controller->Robot_.WhirlwindLeg(params.steps, params.speed, params.amount);
-                            break;
-                        case ACTION_HANDS_UP:
-                            if (controller->has_hands_) {
-                                controller->Robot_.HandsUp(params.speed, params.direction);
-                            }
-                            break;
-                        case ACTION_HANDS_DOWN:
-                            if (controller->has_hands_) {
-                                controller->Robot_.HandsDown(params.speed, params.direction);
-                            }
-                            break;
-                        case ACTION_HAND_WAVE:
-                            if (controller->has_hands_) {
-                                controller->Robot_.HandWave( params.direction);
-                            }
-                            break;
-                        case ACTION_WINDMILL:
-                            if (controller->has_hands_) {
-                                controller->Robot_.Windmill(params.steps, params.speed, params.amount);
-                            }
-                            break;
-                        case ACTION_TAKEOFF:
-                            if (controller->has_hands_) {
-                                controller->Robot_.Takeoff(params.steps, params.speed, params.amount);
-                            }
-                            break;
-                        case ACTION_FITNESS:
-                            if (controller->has_hands_) {
-                                controller->Robot_.Fitness(params.steps, params.speed, params.amount);
-                            }
-                            break;
-                        case ACTION_GREETING:
-                            if (controller->has_hands_) {
-                                controller->Robot_.Greeting(params.direction, params.steps);
-                            }
-                            break;
-                        case ACTION_SHY:
-                            if (controller->has_hands_) {
-                                controller->Robot_.Shy(params.direction, params.steps);
-                            }
-                            break;
-                        case ACTION_HOME:
-                            controller->Robot_.Home(true);
-                            break;
-                    }
-                    if(params.action_type != ACTION_SIT){
-                        if (params.action_type != ACTION_HOME && params.action_type != ACTION_SERVO_SEQUENCE) {
-                            controller->Robot_.Home(params.action_type != ACTION_HANDS_UP);
-                        }
-                    }
-                }
-                */
                 controller->is_action_in_progress_ = false;
-                // HACK :#1 没有电池
+                // HACK #1 没有电池
                 // PowerManager::ResumeBatteryUpdate();  // 动作结束时恢复电量更新
                 vTaskDelay(pdMS_TO_TICKS(20));
             }
@@ -515,19 +160,23 @@ private:
         StartActionTaskIfNeeded();
     }
 
+    /**
+     * 从NVS（非易失性存储）加载机器人的微调设置
+     * 该函数读取存储在NVS中的各个关节的微调值，并应用到机器人上
+     * 
+     * 参数: 无
+     * 返回值: void
+     */
     void LoadTrimsFromNVS() {
         Settings settings("Robot_trims", false);
-
+    
         int head = settings.GetInt("head", 0);
         int right_hand = settings.GetInt("right_hand", 0);
         int left_hand = settings.GetInt("left_hand", 0);
-        int right_foot = settings.GetInt("right_foot", 0);
-        int left_hand = settings.GetInt("left_hand", 0);
-        int right_hand = settings.GetInt("right_hand", 0);
-
-        ESP_LOGI(TAG, "从NVS加载微调设置: 左腿=%d, 右腿=%d, 左脚=%d, 右脚=%d, 左手=%d, 右手=%d",
-                 head, right_hand, left_hand, right_foot, left_hand, right_hand);
-
+    
+        // 记录从NVS加载的微调设置信息
+        ESP_LOGI(TAG, "从NVS加载微调设置: 头=%d, 右手=%d, 左手=%d",head, right_hand, left_hand);
+    
         Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
     }
 
@@ -537,17 +186,12 @@ public:
             hw_config.left_leg_pin, 
             hw_config.right_leg_pin, 
             hw_config.left_foot_pin, 
-            hw_config.right_foot_pin, 
-            hw_config.left_hand_pin,
-            hw_config.right_hand_pin
         );
 
         has_hands_ = (hw_config.left_hand_pin != GPIO_NUM_NC && hw_config.right_hand_pin != GPIO_NUM_NC);
         ESP_LOGI(TAG, "Robot机器人初始化%s手部舵机", has_hands_ ? "带" : "不带");
-        ESP_LOGI(TAG, "舵机引脚配置: LL=%d, RL=%d, LF=%d, RF=%d, LH=%d, RH=%d",
-                 hw_config.left_leg_pin, hw_config.right_leg_pin,
-                 hw_config.left_foot_pin, hw_config.right_foot_pin,
-                 hw_config.left_hand_pin, hw_config.right_hand_pin);
+        ESP_LOGI(TAG, "舵机引脚配置: Head=%d, rightHand=%d, leftHand=%d",
+                 hw_config.left_leg_pin, hw_config.right_leg_pin,hw_config.left_foot_pin);
 
         LoadTrimsFromNVS();
 
