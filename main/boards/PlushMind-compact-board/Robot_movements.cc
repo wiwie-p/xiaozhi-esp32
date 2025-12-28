@@ -39,8 +39,8 @@ unsigned long IRAM_ATTR millis() {
  */
 void Robot::Init(int head, int right_hand, int left_hand) {
     servo_pins_[HEAD] = head;
-    servo_pins_[LH] = left_hand;
     servo_pins_[RH] = right_hand;
+    servo_pins_[LH] = left_hand;
 
     // 检查是否有手部舵机
     has_hands_ = (left_hand != -1 && right_hand != -1);

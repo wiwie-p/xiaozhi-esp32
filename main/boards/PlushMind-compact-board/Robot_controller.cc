@@ -177,15 +177,15 @@ private:
         // 记录从NVS加载的微调设置信息
         ESP_LOGI(TAG, "从NVS加载微调设置: 头=%d, 右手=%d, 左手=%d",head, right_hand, left_hand);
     
-        Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
+        Robot_.SetTrims(head, right_hand, left_hand);
     }
 
 public:
     RobotController(const HardwareConfig& hw_config) {
         Robot_.Init(
-            hw_config.left_leg_pin, 
-            hw_config.right_leg_pin, 
-            hw_config.left_foot_pin, 
+            HEAD_GPIO_NUM, 
+            RH_GPIO_NUM, 
+            LH_GPIO_NUM
         );
 
         has_hands_ = (hw_config.left_hand_pin != GPIO_NUM_NC && hw_config.right_hand_pin != GPIO_NUM_NC);
