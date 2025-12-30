@@ -60,7 +60,6 @@ private:
                 controller->is_action_in_progress_ = true;
                 switch (params.action_type) {
                     case ACTION_WALK: 
-                        // TODO :#2 添加拍手动作执行函数
                         controller->Robot_.Calp();
                         break;
                     default:
@@ -105,7 +104,7 @@ private:
      */
     void QueueAction(int action_type, int steps, int speed, int direction, int amount) {
         // 检查手部动作是否需要手部舵机支持
-        if (action_type >= ACTION_CLAP) {
+        if (action_type == ACTION_CLAP) {
             if (!has_hands_) {
                 ESP_LOGW(TAG, "尝试执行手部动作，但机器人没有配置手部舵机");
                 return;
@@ -213,6 +212,7 @@ public:
                             QueueAction(ACTION_CALP, 1, 1000, 1, 0);
                             }
         /*
+        TODO :#2 MCP添加其他动作函数
         // 统一动作工具（除了舵机序列外的所有动作）
         mcp_server.AddTool("self.Robot.action",
                            "执行机器人动作。action: 动作名称；根据动作类型提供相应参数：direction: 方向，1=前进/左转，-1=后退/右转；0=左右同时"
@@ -434,13 +434,12 @@ public:
                     left_hand = trim_value;
                     settings.SetInt("left_hand", left_hand);
                 } else {
-                    return "错误：无效的舵机类型，请使用: head, right_hand, left_hand, "
-                           "right_foot, left_hand, right_hand";
+                    return "错误：无效的舵机类型，请使用: head, right_hand, left_hand";
                 }
 
                 Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
 
-                QueueAction(ACTION_JUMP, 1, 500, 0, 0);
+                QueueAction(ACTION_CLAP, 1, 500, 0, 0);
 
                 return "舵机 " + servo_type + " 微调设置为 " + std::to_string(trim_value) +
                        " 度，已永久保存";

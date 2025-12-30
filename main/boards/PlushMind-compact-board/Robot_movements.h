@@ -22,9 +22,9 @@
 #define SERVO_LIMIT_DEFAULT 240
 
 // -- Servo indexes for easy access
-#define HEAD 0
-#define LH 1
-#define RH 2
+#define HEAD    0
+#define LH      1
+#define RH      2
 
 #define SERVO_COUNT 3
 

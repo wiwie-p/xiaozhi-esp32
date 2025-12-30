@@ -37,10 +37,10 @@ unsigned long IRAM_ATTR millis() {
  * @param right_hand 右手舵机的引脚编号，-1表示没有右手舵机
  * @param left_hand 左手舵机的引脚编号，-1表示没有左手舵机
  */
-void Robot::Init(int head, int right_hand, int left_hand) {
+void Robot::Init(int head, int left_hand, int right_hand) {
     servo_pins_[HEAD] = head;
-    servo_pins_[RH] = right_hand;
     servo_pins_[LH] = left_hand;
+    servo_pins_[RH] = right_hand;
 
     // 检查是否有手部舵机
     has_hands_ = (left_hand != -1 && right_hand != -1);
@@ -103,20 +103,10 @@ void Robot::DetachServos() {
  * @return 无返回值
  */
 void Robot::SetTrims(int head, int right_hand, int left_hand) {
+    XXX :微调值先全设为0
     servo_trim_[HEAD] = head;
-
-    // 根据机器人是否配备手部来设置手部舵机微调值
-    if (has_hands_) {
-        servo_trim_[LEFT_HAND] = left_hand;
-        servo_trim_[RIGHT_HAND] = right_hand;
-    }
-
-    // 遍历所有舵机，为已配置的舵机设置微调值
-    for (int i = 0; i < SERVO_COUNT; i++) {
-        if (servo_pins_[i] != -1) {
-            servo_[i].SetTrim(servo_trim_[i]);
-        }
-    }
+    servo_trim_[LEFT_HAND] = left_hand;
+    servo_trim_[RIGHT_HAND] = right_hand;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -324,27 +314,11 @@ void Robot::Execute2(int amplitude[SERVO_COUNT], int center_angle[SERVO_COUNT], 
 ///////////////////////////////////////////////////////////////////
 void Robot::Home(bool hands_down) {
     if (is_Robot_resting_ == false) {  // Go to rest position only if necessary
-        // 为所有舵机准备初始位置值
         int homes[SERVO_COUNT];
-        for (int i = 0; i < SERVO_COUNT; i++) {
-            if (i == LEFT_HAND || i == RIGHT_HAND) {
-                if (hands_down) {
-                    // 如果需要复位手部，设置为默认值
-                    if (i == LEFT_HAND) {
-                        homes[i] = LEFT_HAND_HOME_POSITION;     // 左手位置
-                    } else {                                    // 右手复位
-                        homes[i] = RIGHT_HAND_HOME_POSITION;    // 右手位置
-                    }
-                } else {
-                    // 如果不需要复位手部，保持当前位置
-                    homes[i] = servo_[i].GetPosition();
-                }
-            } else {
-                // 头部舵机复位
-                homes[i] = 90;
-            }
-        }
-
+        homes[HEAD] = 90;
+        homes[LH] = LEFT_HAND_HOME_POSITION;     // 左手位置
+        homes[RH] = RIGHT_HAND_HOME_POSITION;    // 右手位置
+        
         MoveServos(700, homes);
         is_Robot_resting_ = true;
     }
