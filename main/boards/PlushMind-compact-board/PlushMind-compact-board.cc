@@ -16,15 +16,13 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 
-#include "Robot"
-
 #ifdef SH1106
 #include <esp_lcd_panel_sh1106.h>
 #endif
 
 #define TAG "PlushMindBompactBoard"
 
-extern void InitializeOttoController(const HardwareConfig& hw_config);
+extern void InitializeRobotController();
 
 class PlushMindBompactBoard : public WifiBoard {
 private:
@@ -185,7 +183,7 @@ private:
     void InitializeTools() {
         // TODO: 任务 #1 - 更改初始化函数
         // static LampController lamp(LAMP_GPIO);
-        InitializeOttoController();
+        ::InitializeRobotController();
     }
 
 public:

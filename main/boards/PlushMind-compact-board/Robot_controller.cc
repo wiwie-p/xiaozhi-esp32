@@ -13,7 +13,7 @@
 #include "config.h"
 #include "mcp_server.h"
 #include "Robot_movements.h"
-#include "power_manager.h"
+// #include "power_manager.h"
 #include "sdkconfig.h"
 #include "settings.h"
 #include <wifi_manager.h>
@@ -60,7 +60,7 @@ private:
                 // PowerManager::PauseBatteryUpdate();  // 动作开始时暂停电量更新
                 controller->is_action_in_progress_ = true;
                 switch (params.action_type) {
-                    case ACTION_WALK: 
+                    case ACTION_CLAP: 
                         controller->Robot_.Calp();
                         break;
                     case ACTION_HOME: 
@@ -123,45 +123,45 @@ private:
         StartActionTaskIfNeeded();
     }
 
-    /**
-     * @brief 将舵机序列JSON添加到执行队列中
-     * 
-     * 该函数接收一个包含舵机序列配置的JSON字符串，验证其有效性后，
-     * 将其封装到参数结构体中并发送到动作执行队列，然后启动动作任务。
-     * 
-     * @param servo_sequence_json 包含舵机序列配置的JSON字符串，格式应为有效的JSON
-     * @return 无返回值，但会通过日志输出操作结果和错误信息
-     */
-    void QueueServoSequence(const char* servo_sequence_json) {
-        if (servo_sequence_json == nullptr) {
-            ESP_LOGE(TAG, "序列JSON为空");
-            return;
-        }
+    // /**
+    //  * @brief 将舵机序列JSON添加到执行队列中
+    //  * 
+    //  * 该函数接收一个包含舵机序列配置的JSON字符串，验证其有效性后，
+    //  * 将其封装到参数结构体中并发送到动作执行队列，然后启动动作任务。
+    //  * 
+    //  * @param servo_sequence_json 包含舵机序列配置的JSON字符串，格式应为有效的JSON
+    //  * @return 无返回值，但会通过日志输出操作结果和错误信息
+    //  */
+    // void QueueServoSequence(const char* servo_sequence_json) {
+    //     if (servo_sequence_json == nullptr) {
+    //         ESP_LOGE(TAG, "序列JSON为空");
+    //         return;
+    //     }
         
-        int input_len = strlen(servo_sequence_json);
-        const int buffer_size = 512;  // servo_sequence_json数组大小
-        ESP_LOGI(TAG, "队列舵机序列，输入长度=%d，缓冲区大小=%d", input_len, buffer_size);
+    //     int input_len = strlen(servo_sequence_json);
+    //     const int buffer_size = 512;  // servo_sequence_json数组大小
+    //     ESP_LOGI(TAG, "队列舵机序列，输入长度=%d，缓冲区大小=%d", input_len, buffer_size);
         
-        if (input_len >= buffer_size) {
-            ESP_LOGE(TAG, "JSON字符串太长！输入长度=%d，最大允许=%d", input_len, buffer_size - 1);
-            return;
-        }
+    //     if (input_len >= buffer_size) {
+    //         ESP_LOGE(TAG, "JSON字符串太长！输入长度=%d，最大允许=%d", input_len, buffer_size - 1);
+    //         return;
+    //     }
         
-        if (input_len == 0) {
-            ESP_LOGW(TAG, "序列JSON为空字符串");
-            return;
-        }
+    //     if (input_len == 0) {
+    //         ESP_LOGW(TAG, "序列JSON为空字符串");
+    //         return;
+    //     }
         
-        RobotActionParams params = {ACTION_SERVO_SEQUENCE, 0, 0, 0, 0, ""};
-        // 复制JSON字符串到结构体中（限制长度）
-        strncpy(params.servo_sequence_json, servo_sequence_json, sizeof(params.servo_sequence_json) - 1);
-        params.servo_sequence_json[sizeof(params.servo_sequence_json) - 1] = '\0';
+    //     RobotActionParams params = {ACTION_SERVO_SEQUENCE, 0, 0, 0, 0, ""};
+    //     // 复制JSON字符串到结构体中（限制长度）
+    //     strncpy(params.servo_sequence_json, servo_sequence_json, sizeof(params.servo_sequence_json) - 1);
+    //     params.servo_sequence_json[sizeof(params.servo_sequence_json) - 1] = '\0';
         
-        ESP_LOGD(TAG, "序列已加入队列: %s", params.servo_sequence_json);
+    //     ESP_LOGD(TAG, "序列已加入队列: %s", params.servo_sequence_json);
         
-        xQueueSend(action_queue_, &params, portMAX_DELAY);
-        StartActionTaskIfNeeded();
-    }
+    //     xQueueSend(action_queue_, &params, portMAX_DELAY);
+    //     StartActionTaskIfNeeded();
+    // }
 
     /**
      * 从NVS（非易失性存储）加载机器人的微调设置
@@ -212,10 +212,11 @@ public:
         mcp_server.AddTool("self.Robot.calp","拍手",
                            PropertyList(),
                            [this](const PropertyList& properties) -> ReturnValue {
-                            QueueAction(ACTION_CALP, 1, 1000, 1, 0);
-                            }
+                            QueueAction(ACTION_CLAP, 1, 1000, 1, 0);
+                            return true;
+                            });
         /*
-        TODO :#2 MCP添加其他动作函数
+        // TODO :#2 MCP添加其他动作函数
         // 统一动作工具（除了舵机序列外的所有动作）
         mcp_server.AddTool("self.Robot.action",
                            "执行机器人动作。action: 动作名称；根据动作类型提供相应参数：direction: 方向，1=前进/左转，-1=后退/右转；0=左右同时"
@@ -399,8 +400,9 @@ public:
                                    vTaskDelete(action_task_handle_);
                                    action_task_handle_ = nullptr;
                                }
-                               is_action_in_progress_ = false;
-                               PowerManager::ResumeBatteryUpdate();  // 停止动作时恢复电量更新
+                               // XXX #1 没有电池
+                            //    is_action_in_progress_ = false;
+                            //    PowerManager::ResumeBatteryUpdate();  // 停止动作时恢复电量更新
                                xQueueReset(action_queue_);
 
                                QueueAction(ACTION_HOME, 1, 1000, 1, 0);
@@ -440,7 +442,7 @@ public:
                     return "错误：无效的舵机类型，请使用: head, right_hand, left_hand";
                 }
 
-                Robot_.SetTrims(head, right_hand, left_hand, right_foot, left_hand, right_hand);
+                Robot_.SetTrims(head, right_hand, left_hand);
 
                 QueueAction(ACTION_CLAP, 1, 500, 0, 0);
 
@@ -459,7 +461,7 @@ public:
                                std::string result =
                                    "{\"head\":" + std::to_string(head) +
                                    ",\"right_hand\":" + std::to_string(right_hand) +
-                                   ",\"left_hand\":" + std::to_string(left_hand) +
+                                   ",\"left_hand\":" + std::to_string(left_hand) + "}";
 
                                ESP_LOGI(TAG, "获取微调设置: %s", result.c_str());
                                return result;
@@ -509,9 +511,9 @@ public:
 
 static RobotController* g_Robot_controller = nullptr;
 
-void InitializeRobotController(const HardwareConfig& hw_config) {
+void InitializeRobotController() {
     if (g_Robot_controller == nullptr) {
-        g_Robot_controller = new RobotController(hw_config);
+        g_Robot_controller = new RobotController();
         ESP_LOGI(TAG, "Robot控制器已初始化并注册MCP工具");
     }
 }

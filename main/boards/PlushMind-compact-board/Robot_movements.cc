@@ -103,10 +103,10 @@ void Robot::DetachServos() {
  * @return 无返回值
  */
 void Robot::SetTrims(int head, int right_hand, int left_hand) {
-    XXX :微调值先全设为0
+    // XXX :微调值先全设为0
     servo_trim_[HEAD] = head;
-    servo_trim_[LEFT_HAND] = left_hand;
-    servo_trim_[RIGHT_HAND] = right_hand;
+    servo_trim_[LH] = left_hand;
+    servo_trim_[RH] = right_hand;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -352,7 +352,7 @@ void Robot::Calp(void) {
     if (!has_hands_) {
         return;
     }
-    TODO #500 测试时修改初始值与偏差值
+    // TODO #500 测试时修改初始值与偏差值
     int target[SERVO_COUNT] = {90, 90, 90};
     MoveServos(400, target);
     int C[SERVO_COUNT] = {90, 90, 90};
