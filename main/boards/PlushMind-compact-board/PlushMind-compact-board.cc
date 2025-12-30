@@ -6,6 +6,7 @@
 #include "button.h"
 #include "config.h"
 #include "mcp_server.h"
+//TODO 注释头文件
 #include "lamp_controller.h"
 #include "led/single_led.h"
 #include "assets/lang_config.h"
@@ -15,11 +16,15 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 
+#include "Robot"
+
 #ifdef SH1106
 #include <esp_lcd_panel_sh1106.h>
 #endif
 
 #define TAG "PlushMindBompactBoard"
+
+extern void InitializeOttoController(const HardwareConfig& hw_config);
 
 class PlushMindBompactBoard : public WifiBoard {
 private:
@@ -32,7 +37,16 @@ private:
     Button volume_up_button_;
     Button volume_down_button_;
 
+    /**
+     * @brief 初始化I2C显示设备总线
+     * 
+     * 该函数配置并创建I2C主设备总线，用于与显示设备通信。
+     * 配置包括I2C端口、SDA/SCL引脚、时钟源等参数，并启用内部上拉电阻。
+     * 
+     * @return 无返回值，但通过ESP_ERROR_CHECK检查初始化过程中的错误
+     */
     void InitializeDisplayI2c() {
+        // 配置I2C主设备总线参数
         i2c_master_bus_config_t bus_config = {
             .i2c_port = (i2c_port_t)0,
             .sda_io_num = DISPLAY_SDA_PIN,
@@ -45,9 +59,18 @@ private:
                 .enable_internal_pullup = 1,
             },
         };
+        // 创建I2C主设备总线实例
         ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &display_i2c_bus_));
     }
 
+    /**
+     * @brief 初始化SSD1306 OLED显示屏
+     * 
+     * 该函数负责配置和初始化SSD1306或SH1106 OLED显示屏，包括I2C通信配置、
+     * 显示驱动安装、显示初始化和基本设置等步骤。
+     * 
+     * @return void 无返回值
+     */
     void InitializeSsd1306Display() {
         // SSD1306 config
         esp_lcd_panel_io_i2c_config_t io_config = {
@@ -77,6 +100,7 @@ private:
         };
         panel_config.vendor_config = &ssd1306_config;
 
+        // 根据编译宏选择使用SH1106或SSD1306驱动
 #ifdef SH1106
         ESP_ERROR_CHECK(esp_lcd_new_panel_sh1106(panel_io_, &panel_config, &panel_));
 #else
@@ -100,6 +124,14 @@ private:
         display_ = new OledDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
     }
 
+    /**
+     * @brief 初始化所有按钮的事件处理函数
+     * 
+     * 该函数为启动按钮、触摸按钮和音量按钮设置相应的点击、长按、按下和释放事件处理逻辑
+     * 启动按钮：在设备启动状态下进入WiFi配置模式，否则切换聊天状态
+     * 触摸按钮：按下时开始监听，释放时停止监听
+     * 音量按钮：支持音量调节和长按最大/静音功能
+     */
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
@@ -116,6 +148,7 @@ private:
             Application::GetInstance().StopListening();
         });
 
+        // 音量增加按钮事件处理：点击增加10%音量，长按设置为最大音量
         volume_up_button_.OnClick([this]() {
             auto codec = GetAudioCodec();
             auto volume = codec->output_volume() + 10;
@@ -131,6 +164,7 @@ private:
             GetDisplay()->ShowNotification(Lang::Strings::MAX_VOLUME);
         });
 
+        // 音量减少按钮事件处理：点击减少10%音量，长按设置为静音
         volume_down_button_.OnClick([this]() {
             auto codec = GetAudioCodec();
             auto volume = codec->output_volume() - 10;
@@ -150,7 +184,8 @@ private:
     // 物联网初始化，逐步迁移到 MCP 协议
     void InitializeTools() {
         // TODO: 任务 #1 - 更改初始化函数
-        static LampController lamp(LAMP_GPIO);
+        // static LampController lamp(LAMP_GPIO);
+        InitializeOttoController();
     }
 
 public:

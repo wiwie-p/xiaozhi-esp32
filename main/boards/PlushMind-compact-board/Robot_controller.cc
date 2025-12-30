@@ -38,7 +38,8 @@ private:
     };
 
     enum ActionType {
-        ACTION_CLAP = 1            // 拍手
+        ACTION_CLAP = 1,            // 拍手
+        ACTION_HOME = 2,        // 回到初始位置
     };
 
     /**
@@ -61,6 +62,9 @@ private:
                 switch (params.action_type) {
                     case ACTION_WALK: 
                         controller->Robot_.Calp();
+                        break;
+                    case ACTION_HOME: 
+                        controller->Robot_.Home();
                         break;
                     default:
                         break;
@@ -180,17 +184,16 @@ private:
     }
 
 public:
-    RobotController(const HardwareConfig& hw_config) {
+    RobotController() {
         Robot_.Init(
             HEAD_GPIO_NUM, 
             RH_GPIO_NUM, 
             LH_GPIO_NUM
         );
 
-        has_hands_ = (hw_config.left_hand_pin != GPIO_NUM_NC && hw_config.right_hand_pin != GPIO_NUM_NC);
-        ESP_LOGI(TAG, "Robot机器人初始化%s手部舵机", has_hands_ ? "带" : "不带");
+        has_hands_ = true;
         ESP_LOGI(TAG, "舵机引脚配置: Head=%d, rightHand=%d, leftHand=%d",
-                 hw_config.left_leg_pin, hw_config.right_leg_pin,hw_config.left_foot_pin);
+                 HEAD_GPIO_NUM, LH_GPIO_NUM,RH_GPIO_NUM);
 
         LoadTrimsFromNVS();
 

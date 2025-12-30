@@ -341,14 +341,13 @@ void Robot::SetRestState(bool state) {
     is_Robot_resting_ = state;
 }
 
-///////////////////////////////////////////////////////////////////
-//-- PREDETERMINED MOTION SEQUENCES -----------------------------//
-///////////////////////////////////////////////////////////////////
-//-- Robot movement: Jump
-//--  Parameters:
-//--    steps: Number of steps
-//--    T: Period
-//---------------------------------------------------------
+/**
+ * @brief 拍手动作执行函数
+ * 
+ * 该函数用于执行机器人的拍手动作，通过控制手部舵机实现拍手效果
+ * 
+ * @return void 无返回值
+ */
 void Robot::Calp(void) {
     if (!has_hands_) {
         return;
