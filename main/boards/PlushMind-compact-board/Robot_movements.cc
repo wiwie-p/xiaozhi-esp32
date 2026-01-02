@@ -319,6 +319,7 @@ void Robot::Home(bool hands_down) {
         homes[LH] = LEFT_HAND_HOME_POSITION;     // 左手位置
         homes[RH] = RIGHT_HAND_HOME_POSITION;    // 右手位置
         
+        
         MoveServos(700, homes);
         is_Robot_resting_ = true;
     }
@@ -358,6 +359,7 @@ void Robot::Calp(void) {
     int C[SERVO_COUNT] = {90, 90, 90};
     int A[SERVO_COUNT] = {0, 45, 45};
     double phase_diff[SERVO_COUNT] = {0, 0, 0};
+
     Execute2(A, C, 300, phase_diff, 1);
 }
 

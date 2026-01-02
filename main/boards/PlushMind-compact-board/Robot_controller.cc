@@ -62,9 +62,11 @@ private:
                 switch (params.action_type) {
                     case ACTION_CLAP: 
                         controller->Robot_.Calp();
+                        ESP_LOGI(TAG, "拍手动作执行完毕");
                         break;
                     case ACTION_HOME: 
                         controller->Robot_.Home();
+                        ESP_LOGI(TAG, "归位动作执行完毕");
                         break;
                     default:
                         break;
@@ -213,6 +215,12 @@ public:
                            PropertyList(),
                            [this](const PropertyList& properties) -> ReturnValue {
                             QueueAction(ACTION_CLAP, 1, 1000, 1, 0);
+                            return true;
+                            });
+        mcp_server.AddTool("self.Robot.home","归位",
+                           PropertyList(),
+                           [this](const PropertyList& properties) -> ReturnValue {
+                            QueueAction(ACTION_HOME, 1, 1000, 1, 0);
                             return true;
                             });
         /*
