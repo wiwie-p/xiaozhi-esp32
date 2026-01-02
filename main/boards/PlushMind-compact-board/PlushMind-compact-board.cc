@@ -6,8 +6,6 @@
 #include "button.h"
 #include "config.h"
 #include "mcp_server.h"
-//TODO 注释头文件
-#include "lamp_controller.h"
 #include "led/single_led.h"
 #include "assets/lang_config.h"
 
@@ -181,8 +179,6 @@ private:
 
     // 物联网初始化，逐步迁移到 MCP 协议
     void InitializeTools() {
-        // TODO: 任务 #1 - 更改初始化函数
-        // static LampController lamp(LAMP_GPIO);
         ::InitializeRobotController();
     }
 

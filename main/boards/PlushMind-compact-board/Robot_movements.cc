@@ -103,10 +103,13 @@ void Robot::DetachServos() {
  * @return 无返回值
  */
 void Robot::SetTrims(int head, int right_hand, int left_hand) {
-    // XXX :微调值先全设为0
-    servo_trim_[HEAD] = head;
-    servo_trim_[LH] = left_hand;
-    servo_trim_[RH] = right_hand;
+    // servo_trim_[HEAD] = head;
+    // servo_trim_[LH] = left_hand;
+    // servo_trim_[RH] = right_hand;
+    ESP_LOGD(TAG, "all trims is 0");
+    servo_trim_[HEAD] = 0;
+    servo_trim_[LH] = 0;
+    servo_trim_[RH] = 0;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -316,8 +319,11 @@ void Robot::Home(bool hands_down) {
     if (is_Robot_resting_ == false) {  // Go to rest position only if necessary
         int homes[SERVO_COUNT];
         homes[HEAD] = 90;
+        ESP_LOGI(TAG, "head home angle: %d",homes[HEAD]);
         homes[LH] = LEFT_HAND_HOME_POSITION;     // 左手位置
+        ESP_LOGI(TAG, "left hand home angle: %d",homes[LH]);
         homes[RH] = RIGHT_HAND_HOME_POSITION;    // 右手位置
+        ESP_LOGI(TAG, "right hand home angle: %d",homes[RH]);
         
         
         MoveServos(700, homes);
